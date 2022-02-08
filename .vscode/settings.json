@@ -1,0 +1,13 @@
+{
+    "C_Cpp.errorSquiggles": "Enabled",
+    "files.associations": {
+        "nodearray.h": "c",
+        "astree.h": "c",
+        "altarastree.h": "c",
+        "altartokens.h": "c",
+        "stdio.h": "c",
+        "altarlexer.c": "cpp",
+        "altarvisitor.h": "c",
+        "integers.h": "c"
+    }
+}
