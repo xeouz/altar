@@ -41,19 +41,9 @@ void ParserUnexpectedTokenError(ParserType* parser)
     printf("[Parser] ParserUnexpectedTokenError - Unexpected Token: %s\n%s\n",parser->CurrentToken->value,TokenToStr(parser->CurrentToken)); 
 }
 
-void ParserVariableDeclarationError(ParserType* parser)
-{
-    printf("[Parser] ParserVariableDeclarationError - Invalid Token: %s\n%s\n",parser->CurrentToken->value,TokenToStr(parser->CurrentToken)); 
-}
-
 void ParserExpressionError(ParserType* parser)
 {
     printf("[Parser] ParserExpressionError - Invalid Token: %s\n%s\n",parser->CurrentToken->value,TokenToStr(parser->CurrentToken)); 
-}
-
-void ParserOutOfScopeError(ParserType* parser)
-{
-    printf("[Parser] ParserOutOfScope - Variable out of scope / Not defined in Scope: %s\n",parser->CurrentToken->value);
 }
 // -- Voids -- 
 
@@ -71,30 +61,6 @@ void ParserAdvanceToken(ParserType* parser, USInt TokenType)
     else
     {
         ParserUnexpectedTokenError(parser);
-    }
-}
-
-void ParserAddToScope(ParserType* parser, char* name)
-{
-    ++parser->VariableScopeSize;
-    parser->VariableScope=realloc(parser->VariableScope,parser->VariableScopeSize*sizeof(char*));
-    parser->VariableScope[parser->VariableScopeSize-1]=name;
-}
-
-void ParserRemoveFromScope(ParserType* parser, char* name)
-{
-    for(USInt i=0;i<parser->VariableScopeSize;++i)
-    {
-        if(strcmp(parser->VariableScope[i],name)==0)
-        {
-            for(USInt j=i;j<parser->VariableScopeSize-1;++j)
-            {
-                parser->VariableScope[j]=parser->VariableScope[j+1];
-            }
-            --parser->VariableScopeSize;
-            parser->VariableScope=realloc(parser->VariableScope,parser->VariableScopeSize*sizeof(char*));
-            break;
-        }
     }
 }
 
@@ -118,17 +84,27 @@ void ParserPrintVar(ParserType* parser, ASTreeType* variableValue)
     }
 }
 
-// -- IChars --
-IChar ParserVarInScope(ParserType* parser, char* name)
+// -- NodeArrays --
+NodeArrayType* ParserParseParenthesis(ParserType* parser)
 {
-    for(Int i=0;i<parser->VariableScopeSize;++i)
+    NodeArrayType* parenthesis=InitNodeArray(sizeof(struct ASTreeStructure));
+    ParserAdvanceToken(parser,TOKEN_LPAREN);
+
+    ASTreeType* statement=ParserParseExpression(parser);
+
+    AppendNodeArray(parenthesis,statement);
+
+    while(parser->CurrentToken->type==TOKEN_COMMA)
     {
-        if(strcmp(parser->VariableScope[i],name)==0)
-        {
-            return 1;
-        }
+        ParserAdvanceToken(parser,TOKEN_COMMA);
+
+        statement=ParserParseExpression(parser);
+        AppendNodeArray(parenthesis,statement);
     }
-    return 0;
+
+    ParserAdvanceToken(parser,TOKEN_RPAREN);
+
+    return parenthesis;
 }
 
 // -- ASTrees --
@@ -192,7 +168,7 @@ ASTreeType* ParserParseStatements(ParserType* parser)
 
 // Parse an Identifier
 ASTreeType* ParserParseIdentifier(ParserType* parser)
-{    
+{   
     // If the current token is "var"
     if(strcmp(parser->CurrentToken->value,"var")==0)
     {
@@ -249,21 +225,9 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
     // Advance the variable name
     ParserAdvanceToken(parser,TOKEN_ID);
 
-
-    if(parser->CurrentToken->type==TOKEN_EQUALS && !ParserVarInScope(parser,variableName))
-    {
-        ParserAddToScope(parser,variableName);
-        ParserAdvanceToken(parser,TOKEN_EQUALS);
-
-        ASTreeType* variable=InitASTree(AST_VARIABLE_DECLARATION);
-        variable->name.variable_def_name=variableName;
-
-        return ParserParseVariableDeclarationHelper(parser,variable);
-    }
-    else if(parser->CurrentToken->type==TOKEN_COLON && !ParserVarInScope(parser,variableName))
+    if(parser->CurrentToken->type==TOKEN_COLON)
     {
         ParserAdvanceToken(parser,TOKEN_COLON);
-        ParserAddToScope(parser,variableName);
 
         ASTreeType* variable=InitASTree(AST_VARIABLE);
         variable->name.variable_name=variableName;
@@ -276,14 +240,6 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
             ParserAdvanceToken(parser,TOKEN_EQUALS);
             return ParserParseVariableDeclarationHelper(parser,variable);
         }
-    }
-    else if(parser->CurrentToken->type==TOKEN_COLON && ParserVarInScope(parser,variableName))
-    {
-        ParserVariableDeclarationError(parser);
-    }
-    else if(parser->CurrentToken->type==TOKEN_EQUALS && ParserVarInScope(parser,variableName))
-    {
-        ParserVariableDeclarationError(parser);
     }
     else
     {
@@ -366,7 +322,6 @@ ASTreeType* ParserParseVariable(ParserType* parser)
     else if(parser->CurrentToken->type==TOKEN_COLON)
     {
         ParserAdvanceToken(parser,TOKEN_COLON);
-        ParserAddToScope(parser,variableName);
 
         ASTreeType* variable=InitASTree(AST_VARIABLE);
         variable->name.variable_name=variableName;
@@ -380,17 +335,7 @@ ASTreeType* ParserParseVariable(ParserType* parser)
             return ParserParseVariableDeclarationHelper(parser,variable);
         }
     }
-    else if(parser->CurrentToken->type==TOKEN_EQUALS && !ParserVarInScope(parser,variableName))
-    {
-        ParserAdvanceToken(parser,TOKEN_EQUALS);
-        ParserAddToScope(parser,variableName);
-
-        ASTreeType* variable=InitASTree(AST_VARIABLE_DECLARATION);
-        variable->name.variable_def_name=variableName;
-
-        return ParserParseVariableDeclarationHelper(parser,variable);
-    }
-    else if(parser->CurrentToken->type==TOKEN_EQUALS && ParserVarInScope(parser,variableName))
+    else if(parser->CurrentToken->type==TOKEN_EQUALS)
     {
         return ParserParseAssignment(parser);
     }
@@ -492,38 +437,12 @@ ASTreeType* ParserParseFunctionCall(ParserType* parser)
 
     printf("[Parser] - Function Call: %s\n",variableName);
 
-
-    // Advance the left parenthesis
-    ParserAdvanceToken(parser,TOKEN_LPAREN);
-
     // Create the function call ASTree
     ASTreeType* functionCall=InitASTree(AST_FUNCTION_CALL);
 
-    functionCall->args.function_call_arguments=InitNodeArray(sizeof(struct ASTreeStructure));
+    functionCall->args.function_call_arguments=ParserParseParenthesis(parser);
 
-    // Parse a Statement
-    ASTreeType* statement = ParserParseStatement(parser);  
-
-    // Add the statement to the node array
-    AppendNodeArray(functionCall->args.function_call_arguments, statement);
-
-    // Parse more statements
-
-    while(parser->CurrentToken->type == TOKEN_COMMA)
-    {
-        // Advance the token SemiColon
-        ParserAdvanceToken(parser, TOKEN_COMMA);
-
-        // Parse a Statement
-        ASTreeType* statement = ParserParseStatement(parser);
-
-        // Add the statement to the node array
-        AppendNodeArray(functionCall->args.function_call_arguments, statement);
-    }
-    
-    ParserAdvanceToken(parser,TOKEN_RPAREN);
-
-    return InitASTree(AST_FUNCTION_CALL);
+    return functionCall;
 }
 
 // -- Destruction --

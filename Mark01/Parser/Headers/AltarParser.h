@@ -21,8 +21,6 @@ ParserType* InitParser(LexerType* lexer);
 
 // Voids
 void ParserAdvanceToken(ParserType* parser, USInt TokenType);
-void ParserAddToScope(ParserType* parser, char* name);
-void ParserRemoveFromScope(ParserType* parser, char* name);
 void ParserPrintVar(ParserType* parser, ASTreeType* variableValue);
 
 // Errors
@@ -30,8 +28,8 @@ void ParserPrintVar(ParserType* parser, ASTreeType* variableValue);
 void ParserEOFError();
 void ParserStatementError(ParserType* parser);
 
-// IChars
-IChar ParserVarInScope(ParserType* parser, char* name);
+// NodeArrays
+NodeArrayType* ParserParseParenthesis(ParserType* parser);
 
 // ASTrees
 ASTreeType* ParserParseRoot(ParserType* parser);

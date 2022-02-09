@@ -16,7 +16,7 @@ int main()
     ParserType* parser;
     ASTreeType* root;
 
-    file=InitIO("../Mark-1/SyntaxTests/Test.altr");
+    file=InitIO("../Mark01/SyntaxTests/Test.altr");
     IOReadFile(file);
 
     lexer=InitLexer(file->data);
@@ -26,7 +26,7 @@ int main()
 
     printf("Root Size (Bytes): %zu\n",sizeof(root));
 
-    DestroyASTree(root);
-    DestroyParser(parser);
-    DestroyFile(file);
+    //DestroyASTree(root);
+    //DestroyParser(parser);
+    //DestroyFile(file);
 }

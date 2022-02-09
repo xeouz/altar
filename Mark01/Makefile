@@ -1,5 +1,5 @@
 srcfldr= ./Compiler
-outfldr= ./Exec
+outfldr= ./Executable
 srcfile= main.c
 src= $(srcfldr)/$(srcfile)
 dst= $(outfldr)/runner.exe
