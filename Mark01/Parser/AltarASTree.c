@@ -17,10 +17,10 @@ ASTreeType* InitASTree(char type)
 // -- Destruction --
 void DestroyASTree(ASTreeType* AST)
 {
-    if(AST->variable_def_value)
+    if(AST->tree_child)
     {
         printf("eHy\n");
-        DestroyASTree(AST->variable_def_value);
+        DestroyASTree(AST->tree_child);
     }
     if(AST->RootValue)
     {

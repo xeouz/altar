@@ -51,7 +51,7 @@ typedef struct ASTreeStructure
 		AST_ROOT
 	}type;
 
-	struct ASTreeStructure* variable_def_value;
+	struct ASTreeStructure* tree_child;
 
 	union
 	{

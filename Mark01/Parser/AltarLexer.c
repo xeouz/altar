@@ -69,10 +69,10 @@ void LexerSkipWS(LexerType* lexer)
 // Skipping Comments
 void LexerSkipComments(LexerType* lexer)
 {
-	// If the current character is a '/'
+	// If the current character is a '/' and the next character is a '-'
 	if(lexer->cursor=='/'&&LexerPeek(lexer,1)=='-')
 	{ 
-		// If the current character is a '/' and the next character is a '-'
+		// If the current character is a '/' and the next-to-next character is a '-'
 		if(LexerPeek(lexer,2)=='-')
 		{
 			int i=0;
@@ -87,17 +87,17 @@ void LexerSkipComments(LexerType* lexer)
 			}
 			
 			// Advance the last characters
-			for(i=0;i<3;++i) LexerAdvanceChar(lexer);
+			for(i=0;i<4;++i) LexerAdvanceChar(lexer);
 		}
 
-		// If the current character is a '/' but the next character is not a '-'
+		// If the current character is a '/' but the next-to-next character is not a '-'
 		else
 		{
 			// Advance the character
 			LexerAdvanceChar(lexer);
 
 			// Skip the rest of the comments
-			while(lexer->cursor!='\n')
+			while(lexer->cursor!='\n'&&lexer->cursor!=0)
 			{
 				LexerAdvanceChar(lexer);
 			}
@@ -148,6 +148,8 @@ TokenType* LexerAdvanceToken(LexerType* lexer)
 
 		// Skip Comments
 		LexerSkipComments(lexer);
+
+		LexerSkipWS(lexer);
 
 		// Peeking the next character
 		char peek=LexerPeek(lexer,1);

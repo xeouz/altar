@@ -154,6 +154,16 @@ char* TokenToSym(TokenType* token)
 	}
 }
 
+char* TokenTypeToStr(USInt type)
+{
+	TokenType* token=InitToken(type,"a");
+
+	char* str=TokenToStr(token);
+
+	DestroyToken(token);
+
+	return str;
+}
 // -- Destruction --
 void DestroyToken(TokenType* token)
 {

@@ -1,1 +1,1 @@
-print(sep="e");
+print('"Hello World"');

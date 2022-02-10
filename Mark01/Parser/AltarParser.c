@@ -38,8 +38,14 @@ void ParserStatementError(ParserType* parser)
 
 void ParserUnexpectedTokenError(ParserType* parser)
 {
-    printf("[Parser] ParserUnexpectedTokenError - Unexpected Token: %s\n%s\n",parser->CurrentToken->value,TokenToStr(parser->CurrentToken)); 
+    printf("[Parser] ParserUnexpectedTokenError - Unexpected Token: `%s` - %s\n\n",parser->CurrentToken->value,TokenToStr(parser->CurrentToken)); 
 }
+
+void PareserDifferentTokenError(ParserType* parser, USInt type)
+{
+    printf("[Parser] ParserDifferentTokenError - Token: `%s` - %s, Expected Token: `%s` - %d\n\n",parser->CurrentToken->value,TokenToStr(parser->CurrentToken),TokenTypeToStr(type),type);
+}
+
 
 void ParserExpressionError(ParserType* parser)
 {
@@ -47,20 +53,20 @@ void ParserExpressionError(ParserType* parser)
 }
 // -- Voids -- 
 
-void ParserAdvanceToken(ParserType* parser, USInt TokenType)
+void ParserAdvanceToken(ParserType* parser, USInt type)
 {
     if(parser->CurrentToken->type==TOKEN_ENDFL)
     {
         ParserEOFError();
     }
-    if (parser->CurrentToken->type == TokenType)
+    if (parser->CurrentToken->type == type)
     {
         parser->PreviousToken = parser->CurrentToken;
         parser->CurrentToken = LexerAdvanceToken(parser->lexer);
     }
     else
     {
-        ParserUnexpectedTokenError(parser);
+        PareserDifferentTokenError(parser, type);
     }
 }
 
@@ -241,6 +247,15 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
             return ParserParseVariableDeclarationHelper(parser,variable);
         }
     }
+    else if(parser->CurrentToken->type==TOKEN_EQUALS)
+    {
+        ParserAdvanceToken(parser,TOKEN_EQUALS);
+
+        ASTreeType* variable=InitASTree(AST_VARIABLE_DECLARATION);
+        variable->name.variable_name=variableName;
+
+        return ParserParseVariableDeclarationHelper(parser,variable);
+    }
     else
     {
         ParserUnexpectedTokenError(parser);
@@ -257,7 +272,7 @@ ASTreeType* ParserParseVariableDeclarationHelper(ParserType* parser, ASTreeType*
     ASTreeType* variableValue=ParserParseExpression(parser);
 
     // Set the variable name and value
-    variable->variable_def_value=variableValue;
+    variable->tree_child=variableValue;
 
     // Printing Variable and Value
     // ParserPrintVar(parser,variableValue);
@@ -288,7 +303,13 @@ ASTreeType* ParserParseExpression(ParserType* parser)
 
 ASTreeType* ParserParseAssignment(ParserType* parser)
 {
-    return InitASTree(AST_VARIABLE_ASSIGNMENT);
+    ASTreeType* assignment=InitASTree(AST_VARIABLE_ASSIGNMENT);
+
+    ParserAdvanceToken(parser,TOKEN_EQUALS);
+
+    assignment->tree_child=ParserParseExpression(parser);
+
+    return assignment;
 }
 
 /*
