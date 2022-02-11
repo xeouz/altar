@@ -227,6 +227,9 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
 
     // Save the variable name
     char* variableName = parser->CurrentToken->value;
+    ASTreeType* variable = InitASTree(AST_VARIABLE_DECLARATION);
+    variable->name.variable_def_name = calloc(1,strlen(variableName)+1);
+    strcpy(variable->name.variable_def_name,variableName);
 
     // Advance the variable name
     ParserAdvanceToken(parser,TOKEN_ID);
@@ -235,8 +238,6 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
     {
         ParserAdvanceToken(parser,TOKEN_COLON);
 
-        ASTreeType* variable=InitASTree(AST_VARIABLE);
-        variable->name.variable_name=variableName;
         variable->val_type.variable_def_value_type=parser->CurrentToken->value;
 
         ParserAdvanceToken(parser,TOKEN_ID);
@@ -244,17 +245,18 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
         if(parser->CurrentToken->type==TOKEN_EQUALS)
         {  
             ParserAdvanceToken(parser,TOKEN_EQUALS);
-            return ParserParseVariableDeclarationHelper(parser,variable);
+            variable = ParserParseVariableDeclarationHelper(parser,variable);
         }
     }
     else if(parser->CurrentToken->type==TOKEN_EQUALS)
     {
         ParserAdvanceToken(parser,TOKEN_EQUALS);
 
-        ASTreeType* variable=InitASTree(AST_VARIABLE_DECLARATION);
-        variable->name.variable_name=variableName;
-
-        return ParserParseVariableDeclarationHelper(parser,variable);
+        variable = ParserParseVariableDeclarationHelper(parser,variable);
+    }
+    else if(parser->CurrentToken->type==TOKEN_SEMICOL || parser->CurrentToken->type==TOKEN_COMMA)
+    {
+        printf("[Parser] - Variable Declaration w/o Value: %s\n",variable->name.variable_def_name);
     }
     else
     {
@@ -262,12 +264,65 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
         exit(1);
     }
 
-    return NULL;
+
+    if(parser->CurrentToken->type==TOKEN_COMMA)
+    {
+        ASTreeType* AST=InitASTree(AST_MULTI_VARIABLE_DECLARATION);
+
+        AST->RootValue=InitNodeArray(sizeof(struct ASTreeStructure));
+
+        AppendNodeArray(AST->RootValue,variable);
+
+        while(parser->CurrentToken->type==TOKEN_COMMA)
+        {
+            ParserAdvanceToken(parser,TOKEN_COMMA);
+
+            variableName=parser->CurrentToken->value;
+
+            ParserAdvanceToken(parser,TOKEN_ID);
+
+            if(parser->CurrentToken->type==TOKEN_COLON)
+            {
+                ParserAdvanceToken(parser,TOKEN_COLON);
+
+                variable->val_type.variable_def_value_type=parser->CurrentToken->value;
+
+                ParserAdvanceToken(parser,TOKEN_ID);
+
+                if(parser->CurrentToken->type==TOKEN_EQUALS)
+                {  
+                    ParserAdvanceToken(parser,TOKEN_EQUALS);
+
+                    AppendNodeArray(AST->RootValue,ParserParseVariableDeclarationHelper(parser,variable));
+                }
+            }
+            else if(parser->CurrentToken->type==TOKEN_EQUALS)
+            {
+                ParserAdvanceToken(parser,TOKEN_EQUALS);
+
+                AppendNodeArray(AST->RootValue,ParserParseVariableDeclarationHelper(parser,variable));
+            }
+            else if(parser->CurrentToken->type==TOKEN_SEMICOL || parser->CurrentToken->type==TOKEN_COMMA)
+            {
+                printf("[Parser] - Variable Declaration w/o Value: %s\n",variable->name.variable_def_name);
+
+                AppendNodeArray(AST->RootValue,variable);
+            }
+            else
+            {
+                ParserUnexpectedTokenError(parser);
+                exit(1);
+            }
+        }
+        return AST;
+    }
+
+    return variable;
 }
 
 ASTreeType* ParserParseVariableDeclarationHelper(ParserType* parser, ASTreeType* variable)
 {
-    printf("[Parser] - Variable Declaration: %s\n",variable->name.variable_def_name);
+    printf("[Parser] - Variable Declaration w/ Value: %s\n",variable->name.variable_def_name);
     // Parse the variable value
     ASTreeType* variableValue=ParserParseExpression(parser);
 

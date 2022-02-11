@@ -78,6 +78,7 @@ char* TokenToStr(TokenType* token)
 		case TOKEN_CARET: return "CARET";
 		case TOKEN_HASHT: return "HASHT";
 		case TOKEN_ATSYM: return "ATSYM";
+		case TOKEN_DOT: return "DOT";
 		case TOKEN_COMMNT: return "CMMNT";
 		case TOKEN_LSCMMNT: return "LSCMMNT";
 		case TOKEN_LECMMNT: return "LECMMNT";
@@ -138,6 +139,7 @@ char* TokenToSym(TokenType* token)
 		case TOKEN_CARET: return "^";
 		case TOKEN_HASHT: return "#";
 		case TOKEN_ATSYM: return "@";
+		case TOKEN_DOT: return ".";
 		case TOKEN_COMMNT: return "/-";
 		case TOKEN_LSCMMNT: return "/--";
 		case TOKEN_LECMMNT: return "--/";

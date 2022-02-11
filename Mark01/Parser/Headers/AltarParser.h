@@ -42,6 +42,7 @@ ASTreeType* ParserParseTerm(ParserType* parser);
 ASTreeType* ParserParseIdentifier(ParserType* parser);
 ASTreeType* ParserParseVariable(ParserType* parser);
 ASTreeType* ParserParseVariableDeclaration(ParserType* parser);
+ASTreeType* ParserParseMultiVariableDeclaration(ParserType* parser);
 ASTreeType* ParserParseVariableDeclarationHelper(ParserType* parser, ASTreeType* AST);
 ASTreeType* ParserParseVariableAssignment(ParserType* parser);
 ASTreeType* ParserParseInteger(ParserType* parser);

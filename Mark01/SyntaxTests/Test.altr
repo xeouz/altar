@@ -1,1 +1,1 @@
-print('"Hello World"');
+var foo,bar="E",name;

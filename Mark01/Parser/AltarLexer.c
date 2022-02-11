@@ -325,6 +325,7 @@ TokenType* LexerAdvanceToken(LexerType* lexer)
 			case '#': return LexerAdvanceInplace(lexer,TOKEN_HASHT);
 			case '^': return LexerAdvanceInplace(lexer,TOKEN_CARET);
 			case '@': return LexerAdvanceInplace(lexer,TOKEN_ATSYM);
+			case '.': return LexerAdvanceInplace(lexer,TOKEN_DOT);
 
 			case '"': return LexerGatherStrChar(lexer);
 			case '\'':return LexerGatherStrChar(lexer);
