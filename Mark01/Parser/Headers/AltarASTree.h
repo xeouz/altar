@@ -1,9 +1,9 @@
 #ifndef ASTREES
 #define ASTREES
 
-#include "NodeArray.h"
-
 #include "Integers.h"
+
+typedef struct NodeArrayStructure NodeArrayType;
 
 typedef struct ASTreeStructure
 {
@@ -48,6 +48,8 @@ typedef struct ASTreeStructure
 
 		AST_PARENTHESIS,
 
+		AST_SHIFTLN,
+		AST_BLOCK,
 		AST_ROOT
 	}type;
 
@@ -70,8 +72,8 @@ typedef struct ASTreeStructure
 
 	union
 	{
-		NodeArrayType* function_def_arguments;
-		NodeArrayType* function_call_arguments;
+		struct NodeArrayStructure* function_def_arguments;
+		struct NodeArrayStructure* function_call_arguments;
 	}args;
 
 	// Value
@@ -89,7 +91,13 @@ typedef struct ASTreeStructure
 		char* variable_def_value_type;
 	}val_type;
 
-	NodeArrayType* RootValue;
+	struct ASTreeStructure* ifexpr;
+	struct ASTreeStructure* ifbody;
+	struct ASTreeStructure* ifelse;
+	struct ASTreeStructure* elsebody;
+
+
+	struct NodeArrayStructure* RootValue;
 }ASTreeType;
 
 // Initialization

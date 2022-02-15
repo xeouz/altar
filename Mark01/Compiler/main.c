@@ -24,7 +24,7 @@ int main()
     parser=InitParser(lexer);
     root=ParserParseRoot(parser);
 
-    printf("Root Size (Bytes): %zu\n",sizeof(root));
+    printf("Root Size: %d\n",root->RootValue->size);
 
     //DestroyASTree(root);
     //DestroyParser(parser);

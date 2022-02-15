@@ -6,7 +6,7 @@
 
 typedef struct NodeArrayStructure
 {
-    void** trees;
+    ASTreeType** trees;
     Int size;
     Int tree_size;
 
@@ -17,7 +17,10 @@ typedef struct NodeArrayStructure
 NodeArrayType* InitNodeArray(SInt tree_size);
 
 // Voids
-void AppendNodeArray(NodeArrayType* Array, void* itm);
+void AppendNodeArray(NodeArrayType* Array, ASTreeType* itm);
+
+// ASTreeTypes
+ASTreeType* GetNodeArray(NodeArrayType* Array, SInt index);
 
 // Destruction
 void DestroyNodeArray(NodeArrayType* Array);

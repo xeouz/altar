@@ -5,6 +5,7 @@
 
 #include "Headers/NodeArray.h"
 #include "Headers/Integers.h"
+#include "Headers/AltarASTree.h"
 
 #include "AltarASTree.c"
 
@@ -19,8 +20,20 @@ NodeArrayType* InitNodeArray(SInt tree_size)
     return Array;
 }
 
+// -- ASTreeTypes --
+ASTreeType* GetNodeArray(NodeArrayType* Array, SInt index)
+{
+    if(index>=Array->size)
+    {
+        printf("Error: NodeArray index out of bounds.\n");
+        return 0;
+    }
+
+    return Array->trees[index];
+}
+
 // -- Voids --
-void AppendNodeArray(NodeArrayType* Array, void* itm)
+void AppendNodeArray(NodeArrayType* Array, ASTreeType* itm)
 {
     ++Array->size;
 
@@ -41,7 +54,7 @@ void DestroyNodeArray(NodeArrayType* Array)
 {
     for(Int i=0;i<Array->size;++i)
     {
-        DestroyNodeArray(Array->trees[i]);
+        DestroyASTree(Array->trees[i]);
     }
     free(Array);
 }

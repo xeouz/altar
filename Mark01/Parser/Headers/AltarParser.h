@@ -38,6 +38,7 @@ ASTreeType* ParserParseStatements(ParserType* parser);
 ASTreeType* ParserParseExpression(ParserType* parser);
 ASTreeType* ParserParseFactor(ParserType* parser);
 ASTreeType* ParserParseTerm(ParserType* parser);
+ASTreeType* ParserParseBlock(ParserType* parser);
 
 ASTreeType* ParserParseIdentifier(ParserType* parser);
 ASTreeType* ParserParseVariable(ParserType* parser);
@@ -50,8 +51,11 @@ ASTreeType* ParserParseFloat(ParserType* parser);
 ASTreeType* ParserParseString(ParserType* parser);
 ASTreeType* ParserParseCharacter(ParserType* parser);
 ASTreeType* ParserParseBool(ParserType* parser);
+
+ASTreeType* ParserParseIf(ParserType* parser);
 ASTreeType* ParserParseFunction(ParserType* parser);
 ASTreeType* ParserParseFunctionCall(ParserType* parser);
+
 
 // Destruction
 void DestroyParser(ParserType* Parser);
