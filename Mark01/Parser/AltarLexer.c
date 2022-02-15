@@ -199,6 +199,11 @@ TokenType* LexerAdvanceToken(LexerType* lexer)
 					}
 					return LexerAdvanceWithToken(lexer,InitToken(TOKEN_DECR,"--"));
 				}
+				if(peek=='>')
+				{
+					LexerAdvanceChar(lexer);
+					return LexerAdvanceWithToken(lexer,InitToken(TOKEN_RARROW,"->"));
+				}
 				if(peek=='=')
 				{
 					LexerAdvanceChar(lexer);

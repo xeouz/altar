@@ -62,6 +62,8 @@ typedef struct ASTreeStructure
 		
 		char* function_call_name;
 		char* function_def_name;
+
+		char* class_def_name;
 	}name;
 
 	union
@@ -74,6 +76,7 @@ typedef struct ASTreeStructure
 	{
 		struct NodeArrayStructure* function_def_arguments;
 		struct NodeArrayStructure* function_call_arguments;
+		struct NodeArrayStructure* class_def_arguments;
 	}args;
 
 	// Value
@@ -89,6 +92,7 @@ typedef struct ASTreeStructure
 	union
 	{
 		char* variable_def_value_type;
+		char* function_def_return_type;
 	}val_type;
 
 	struct ASTreeStructure* ifexpr;
@@ -96,6 +100,16 @@ typedef struct ASTreeStructure
 	struct ASTreeStructure* ifelse;
 	struct ASTreeStructure* elsebody;
 
+	struct ASTreeStructure* whileexpr;
+	struct ASTreeStructure* whilebody;
+
+	struct ASTreeStructure* forinit;
+	struct ASTreeStructure* forcond;
+	struct ASTreeStructure* forinc;
+	struct ASTreeStructure* forbody;
+
+	struct ASTreeStructure* funcbody;
+	struct ASTreeStructure* classbody;
 
 	struct NodeArrayStructure* RootValue;
 }ASTreeType;

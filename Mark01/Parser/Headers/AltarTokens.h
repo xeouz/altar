@@ -62,6 +62,7 @@ typedef struct TokenStructure{
 		TOKEN_HASHT, // #
 		TOKEN_ATSYM, // @
 		TOKEN_DOT, // .
+		TOKEN_RARROW, // ->
 
 		TOKEN_COMMNT, // /-
 		TOKEN_LSCMMNT, // /--

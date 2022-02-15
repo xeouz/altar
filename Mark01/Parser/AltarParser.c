@@ -93,8 +93,15 @@ void ParserPrintVar(ParserType* parser, ASTreeType* variableValue)
 // -- NodeArrays --
 NodeArrayType* ParserParseParenthesis(ParserType* parser)
 {
+    
     NodeArrayType* parenthesis=InitNodeArray(sizeof(struct ASTreeStructure));
     ParserAdvanceToken(parser,TOKEN_LPAREN);
+
+    if(parser->CurrentToken->type==TOKEN_RPAREN)
+    {
+        ParserAdvanceToken(parser,TOKEN_RPAREN);
+        return parenthesis;
+    }
 
     ASTreeType* statement=ParserParseExpression(parser);
 
@@ -181,18 +188,19 @@ ASTreeType* ParserParseIdentifier(ParserType* parser)
         return ParserParseIf(parser);
     }
     
-    /*
     // If the current token is "while"
     else if(strcmp(parser->CurrentToken->value,"while")==0)
     {
         return ParserParseWhile(parser);
     }
 
+    
     // If the current token is "for"
     else if(strcmp(parser->CurrentToken->value,"for")==0)
     {
         return ParserParseFor(parser);
     }
+    
 
     // If the current token is "return"
     else if(strcmp(parser->CurrentToken->value,"return")==0)
@@ -205,7 +213,12 @@ ASTreeType* ParserParseIdentifier(ParserType* parser)
     {
         return ParserParseFunction(parser);
     }
-    */
+    // If the current token is "class"
+    else if(strcmp(parser->CurrentToken->value,"class")==0)
+    {
+        return ParserParseClass(parser);
+    }
+
     // else
     else
     {
@@ -353,8 +366,6 @@ ASTreeType* ParserParseExpression(ParserType* parser)
         default: ParserExpressionError(parser);
     }
 
-
-    printf("WRONG\n");
     exit(1);
     return NULL;
 }
@@ -383,6 +394,44 @@ ASTreeType* ParserParseTerm(ParserType* parser)
 
 }
 */
+
+ASTreeType* ParserParseReturn(ParserType* parser)
+{
+    ParserAdvanceToken(parser,TOKEN_ID); // Advance the keyword "return"
+
+    char paren=0;
+
+    ASTreeType* return_statement=InitASTree(AST_RETURN);
+
+    if(parser->CurrentToken->type==TOKEN_SEMICOL)
+    {
+        ParserAdvanceToken(parser,TOKEN_SEMICOL);
+        return return_statement;
+    }
+    
+    if(parser->CurrentToken->type==TOKEN_LPAREN)
+    {
+        ParserAdvanceToken(parser,TOKEN_LPAREN);
+        paren=1;
+    }
+
+    return_statement->RootValue=InitNodeArray(sizeof(struct ASTreeStructure));
+
+    AppendNodeArray(return_statement->RootValue,ParserParseExpression(parser));
+
+    while(parser->CurrentToken->type==TOKEN_COMMA)
+    {
+        ParserAdvanceToken(parser,TOKEN_COMMA);
+        AppendNodeArray(return_statement->RootValue,ParserParseExpression(parser));
+    }
+
+    if(paren)
+    {
+        ParserAdvanceToken(parser,TOKEN_RPAREN);
+    }
+
+    return return_statement;
+}
 
 ASTreeType* ParserParseBlock(ParserType* parser)
 {
@@ -569,19 +618,114 @@ ASTreeType* ParserParseIf(ParserType* parser)
     return AST;
 }
 
-/*
+ASTreeType* ParserParseFor(ParserType* parser)
+{
+    ParserAdvanceToken(parser,TOKEN_ID); // "for"
+
+    ASTreeType* AST=InitASTree(AST_FOR);
+
+    ParserAdvanceToken(parser,TOKEN_LPAREN); // "("
+    AST->forinit=ParserParseStatement(parser);
+    ParserAdvanceToken(parser,TOKEN_SEMICOL); // ";"
+    AST->forcond=ParserParseExpression(parser);
+    ParserAdvanceToken(parser,TOKEN_SEMICOL); // ";"
+    AST->forinc=ParserParseStatement(parser);
+    ParserAdvanceToken(parser,TOKEN_RPAREN); // ")"
+
+    if(parser->CurrentToken->type!=TOKEN_LBRACE)
+    {
+        AST->forbody=ParserParseStatement(parser);
+    }
+    else
+    {
+        AST->forbody=ParserParseBlock(parser);
+    }
+
+    return AST;
+}
+
+ASTreeType* ParserParseWhile(ParserType* parser)
+{
+    ParserAdvanceToken(parser,TOKEN_ID); // "while"
+
+    ASTreeType* AST=InitASTree(AST_WHILE);
+
+    ParserAdvanceToken(parser,TOKEN_LPAREN); // "("
+    AST->whileexpr=ParserParseExpression(parser);
+    ParserAdvanceToken(parser,TOKEN_RPAREN); // ")"
+
+    if(parser->CurrentToken->type!=TOKEN_LBRACE)
+    {
+        AST->whilebody=ParserParseStatement(parser);
+    }
+    else
+    {
+        AST->whilebody=ParserParseBlock(parser);
+    }
+
+    return AST;
+}
+
+ASTreeType* ParserParseClass(ParserType* parser)
+{
+    ParserAdvanceToken(parser,TOKEN_ID); // "class"
+
+    ASTreeType* AST=InitASTree(AST_CLASS_DECLARATION);
+    AST->name.class_def_name=parser->CurrentToken->value;
+
+    ParserAdvanceToken(parser,TOKEN_ID); // "extends"
+    AST->args.class_def_arguments=InitNodeArray(sizeof(struct ASTreeStructure));
+
+    if(parser->CurrentToken->type!=TOKEN_LBRACE)
+    {
+        AppendNodeArray(AST->args.class_def_arguments,ParserParseExpression(parser));
+        ParserAdvanceToken(parser,TOKEN_ID);
+    }
+
+    while(parser->CurrentToken->type==TOKEN_COMMA)
+    {
+        ParserAdvanceToken(parser,TOKEN_COMMA);
+        
+        if(parser->CurrentToken->type==TOKEN_LBRACE)
+            break;
+
+        AppendNodeArray(AST->args.class_def_arguments,ParserParseExpression(parser));
+    }
+
+    AST->classbody=ParserParseBlock(parser);
+
+    return AST;
+}
+
 ASTreeType* ParserParseFunction(ParserType* parser)
 {
+    ParserAdvanceToken(parser,TOKEN_ID); // "func"
 
+    ASTreeType* AST=InitASTree(AST_FUNCTION_DECLARATION);
+    AST->name.function_def_name=parser->CurrentToken->value;
+    ParserAdvanceToken(parser,TOKEN_ID); // name
+
+    AST->args.function_def_arguments=ParserParseParenthesis(parser);
+
+    if(parser->CurrentToken->type==TOKEN_RARROW)
+    {
+        ParserAdvanceToken(parser,TOKEN_RARROW);
+        AST->val_type.function_def_return_type=parser->CurrentToken->value;
+        ParserAdvanceToken(parser,TOKEN_ID); // return type
+    }
+
+    AST->funcbody=ParserParseBlock(parser);
+
+    return AST;
 }
-*/
+
 
 // Parse a function call
 ASTreeType* ParserParseFunctionCall(ParserType* parser)
 {
-    char* variableName=parser->PreviousToken->value;
+    //char* variableName=parser->PreviousToken->value;
 
-    printf("[Parser] - Function Call: %s\n",variableName);
+    //printf("[Parser] - Function Call: %s\n",variableName);
 
     // Create the function call ASTree
     ASTreeType* functionCall=InitASTree(AST_FUNCTION_CALL);

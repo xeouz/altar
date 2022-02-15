@@ -1,11 +1,1 @@
-if(fo)
-{
-    print(e);
-    print(f);
-}
-else if(bruh)
-{
-    print(e);
-}
-
-var a = b;
+foo:int = 10 + 1;
