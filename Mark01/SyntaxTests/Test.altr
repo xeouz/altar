@@ -1,1 +1,4 @@
-foo:int = 10 + 1;
+func main()
+{
+  print("lmao");
+}
