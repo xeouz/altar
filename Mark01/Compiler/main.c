@@ -28,8 +28,8 @@ int main()
     printf("Root Size: %d\n",root->RootValue->size);
 
     //DestroyASTree(root);
-    DestroyParser(parser);
-    DestroyFile(file);
+    //DestroyParser(parser);
+    //DestroyFile(file);
 
     return 0;
 }
