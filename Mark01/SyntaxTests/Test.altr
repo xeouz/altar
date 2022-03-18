@@ -1,1 +1,1 @@
-var foo:int = a + (b-c);
+var foo:int = a+b-c;
