@@ -12,8 +12,7 @@ typedef struct ParserStructure
     LexerType* lexer;
     TokenType* CurrentToken;
     TokenType* PreviousToken;
-    char** VariableScope;
-    Int VariableScopeSize;
+    ASTreeType* PreviousAST;
 }ParserType;
 
 // Initialization
@@ -30,6 +29,7 @@ void ParserStatementError(ParserType* parser);
 
 // NodeArrays
 NodeArrayType* ParserParseParenthesis(ParserType* parser);
+NodeArrayType* ParserParseClosure(ParserType* parser);
 
 // ASTrees
 ASTreeType* ParserParseRoot(ParserType* parser);
@@ -37,7 +37,7 @@ ASTreeType* ParserParseStatement(ParserType* parser);
 ASTreeType* ParserParseStatements(ParserType* parser);
 ASTreeType* ParserParseExpression(ParserType* parser);
 ASTreeType* ParserParseFactor(ParserType* parser);
-ASTreeType* ParserParseTerm(ParserType* parser);
+ASTreeType* ParserParseTerm(ParserType* parser, TokenType* term);
 ASTreeType* ParserParseBlock(ParserType* parser);
 
 ASTreeType* ParserParseReturn(ParserType* parser);
@@ -60,6 +60,8 @@ ASTreeType* ParserParseIf(ParserType* parser);
 ASTreeType* ParserParseFunction(ParserType* parser);
 ASTreeType* ParserParseFunctionCall(ParserType* parser);
 ASTreeType* ParserParseClass(ParserType* parser);
+
+ASTreeType* ParserParseArithmetic(ParserType* parser);
 
 // Destruction
 void DestroyParser(ParserType* Parser);

@@ -49,6 +49,30 @@ void AppendNodeArray(NodeArrayType* Array, ASTreeType* itm)
     Array->trees[Array->size]=itm;
 }
 
+ASTreeType* PopNodeArray(NodeArrayType* Array)
+{
+    if(Array->size<=0)
+    {
+        printf("Error: NodeArray is empty.\n");
+        return 0;
+    }
+
+    ASTreeType* itm=Array->trees[Array->size];
+    --Array->size;
+
+    if(Array->size==0)
+    {
+        free(Array->trees);
+        Array->trees=0;
+    }
+    else
+    {
+        Array->trees=realloc(Array->trees,Array->tree_size*Array->size);
+    }
+
+    return itm;
+}
+
 // -- Destruction --
 void DestroyNodeArray(NodeArrayType* Array)
 {
@@ -59,11 +83,11 @@ void DestroyNodeArray(NodeArrayType* Array)
     free(Array);
 }
 
-void FreeASTreeArray(NodeArrayType* Array)
+void DestroyASTreeArray(NodeArrayType* Array)
 {
-    for(Int i=0;i<Array->size;++i)
+    for(Int i=1;i<Array->size+1;++i)
     {
-        free(Array->trees[i]);
+        DestroyASTree(Array->trees[i]);
     }
 }
 

@@ -8,6 +8,7 @@
         "stdio.h": "c",
         "altarlexer.c": "cpp",
         "altarvisitor.h": "c",
-        "integers.h": "c"
+        "integers.h": "c",
+        "includelinker.h": "c"
     }
 }

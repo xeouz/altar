@@ -7,7 +7,7 @@
 
 int main()
 {
-    printf("Initlializing Parser\n\n");
+    printf("Initializing Parser\n\n");
 
     // Create Altar Parser/Lexer
 
@@ -22,11 +22,14 @@ int main()
     lexer=InitLexer(file->data);
 
     parser=InitParser(lexer);
+
     root=ParserParseRoot(parser);
 
     printf("Root Size: %d\n",root->RootValue->size);
 
     //DestroyASTree(root);
-    //DestroyParser(parser);
-    //DestroyFile(file);
+    DestroyParser(parser);
+    DestroyFile(file);
+
+    return 0;
 }

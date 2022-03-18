@@ -21,6 +21,7 @@ void AppendNodeArray(NodeArrayType* Array, ASTreeType* itm);
 
 // ASTreeTypes
 ASTreeType* GetNodeArray(NodeArrayType* Array, SInt index);
+ASTreeType* PopNodeArray(NodeArrayType* Array);
 
 // Destruction
 void DestroyNodeArray(NodeArrayType* Array);

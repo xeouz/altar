@@ -8,6 +8,7 @@
 #include "Headers/Integers.h"
 #include "Headers/AltarParser.h"
 #include "Headers/AltarTokens.h"
+#include "Headers/AltarArithmetic.h"
 
 #include "AltarASTree.c"
 #include "AltarLexer.c"
@@ -20,8 +21,8 @@ ParserType* InitParser(LexerType* lexer)
     parser->lexer = lexer;
     parser->CurrentToken = LexerAdvanceToken(parser->lexer);
     parser->PreviousToken = parser->CurrentToken;
-    parser->VariableScope=(char**)calloc(1,sizeof(char*));
-    parser->VariableScopeSize=0;
+    parser->PreviousAST = InitASTree(AST_SHIFTLN);
+
     return parser;
 }
 
@@ -61,6 +62,7 @@ void ParserAdvanceToken(ParserType* parser, USInt type)
     }
     if (parser->CurrentToken->type == type)
     {
+        // DestroyToken(parser->PreviousToken);
         parser->PreviousToken = parser->CurrentToken;
         parser->CurrentToken = LexerAdvanceToken(parser->lexer);
     }
@@ -131,12 +133,22 @@ ASTreeType* ParserParseRoot(ParserType* parser)
 // Parse a Statement
 ASTreeType* ParserParseStatement(ParserType* parser)
 {
+    ASTreeType* AST;
     switch(parser->CurrentToken->type)
     {
-        case TOKEN_ID: return ParserParseIdentifier(parser);
+        case TOKEN_ID: AST=ParserParseIdentifier(parser);break;
+        case TOKEN_INTEGER: AST=ParserParseInteger(parser);break;
 
-        default: return InitASTree(AST_SHIFTLN); break;
+        case TOKEN_ADD: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_SUB: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_MUL: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_DIV: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_MOD: AST=ParserParseArithmetic(parser);break;
+
+        default: AST=InitASTree(AST_SHIFTLN); break;
     }
+
+    return AST;
 }
 
 // Parse multiple statements
@@ -149,7 +161,6 @@ ASTreeType* ParserParseStatements(ParserType* parser)
     AST->RootValue=InitNodeArray(sizeof(struct ASTreeStructure));
 
     // Parse a Statement
-
     ASTreeType* statement = ParserParseStatement(parser);
 
     // Add the statement to the node array
@@ -271,7 +282,6 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
         exit(1);
     }
 
-
     if(parser->CurrentToken->type==TOKEN_COMMA)
     {
         ASTreeType* AST=InitASTree(AST_MULTI_VARIABLE_DECLARATION);
@@ -352,24 +362,31 @@ ASTreeType* ParserParseVariableDeclarationHelper(ParserType* parser, ASTreeType*
 // Parse an Expression
 ASTreeType* ParserParseExpression(ParserType* parser)
 {   
+    ASTreeType* AST;
+
     // Switch on the current token type
     switch(parser->CurrentToken->type)
     {
-        case TOKEN_ID: return ParserParseIdentifier(parser);
-        case TOKEN_STR: return ParserParseString(parser);
-        case TOKEN_INTEGER: return ParserParseInteger(parser);
-        case TOKEN_FLOAT: return ParserParseFloat(parser);
-        case TOKEN_CHAR: return ParserParseCharacter(parser);
-        case TOKEN_BOOL: return ParserParseBool(parser);
+        case TOKEN_ID: AST=ParserParseIdentifier(parser);break;
+        case TOKEN_STR: AST=ParserParseString(parser);break;
+        case TOKEN_INTEGER: AST=ParserParseInteger(parser);break;
+        case TOKEN_FLOAT: AST=ParserParseFloat(parser);break;
+        case TOKEN_CHAR: AST=ParserParseCharacter(parser);break;
+        case TOKEN_BOOL: AST=ParserParseBool(parser);break;
+
+        case TOKEN_ADD: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_SUB: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_MUL: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_DIV: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_MOD: AST=ParserParseArithmetic(parser);break;
 
         // Raise an error if the current token is not an expression
-        default: ParserExpressionError(parser);
+        default: ParserExpressionError(parser); exit(1);
     }
 
-    exit(1);
-    return NULL;
+    parser->PreviousAST=AST;
+    return AST;
 }
-
 
 ASTreeType* ParserParseAssignment(ParserType* parser)
 {
@@ -389,10 +406,6 @@ ASTreeType* ParserParseFactor(ParserType* parser)
 
 }
 
-ASTreeType* ParserParseTerm(ParserType* parser)
-{
-
-}
 */
 
 ASTreeType* ParserParseReturn(ParserType* parser)
@@ -695,6 +708,135 @@ ASTreeType* ParserParseClass(ParserType* parser)
     AST->classbody=ParserParseBlock(parser);
 
     return AST;
+}
+
+ASTreeType* ParserParseArithmetic(ParserType* parser)
+{
+
+    // Arithmetic, uses BODMAS rules
+
+    // Initiate arithmetic sequence and add the previous variable/literal
+    NodeArrayType* Sequence=InitNodeArray(sizeof(struct ASTreeStructure));
+    AppendNodeArray(Sequence,parser->PreviousAST);
+    
+    // if the current token is an operator, add it to the sequence
+    while( parser->CurrentToken->type==TOKEN_ADD
+        || parser->CurrentToken->type==TOKEN_SUB 
+        || parser->CurrentToken->type==TOKEN_MUL 
+        || parser->CurrentToken->type==TOKEN_DIV 
+        || parser->CurrentToken->type==TOKEN_MOD)
+    {
+        // if the current token is an operator, add it to the sequence
+        switch(parser->CurrentToken->type)
+        {
+            case TOKEN_ADD: AppendNodeArray(Sequence,InitASTree(AST_ADD)); break;
+            case TOKEN_SUB: AppendNodeArray(Sequence,InitASTree(AST_SUB)); break;
+            case TOKEN_MUL: AppendNodeArray(Sequence,InitASTree(AST_MUL)); break;
+            case TOKEN_DIV: AppendNodeArray(Sequence,InitASTree(AST_DIV)); break;
+            case TOKEN_MOD: AppendNodeArray(Sequence,InitASTree(AST_MOD)); break;
+
+            default: printf("Error: Unknown arithmetic operator - %s\n",parser->CurrentToken->value); break;
+        }
+
+        ParserAdvanceToken(parser,parser->CurrentToken->type);
+
+        // if the current token is an opening parenthesis, then parse the closure and add the parenthesis to the sequence
+        if(parser->CurrentToken->type==TOKEN_LPAREN)
+        {
+            NodeArrayType* closure=ParserParseClosure(parser);
+
+            for(Int i=1;i<closure->size;i++)
+            {
+                AppendNodeArray(Sequence,closure->trees[i]);
+            }
+        }
+
+        // else, add it directly to the sequence
+        else
+            AppendNodeArray(Sequence,ParserParseExpression(parser));
+    }
+
+    // convert the sequence to postfix notation
+    NodeArrayType* postfix=ArithPostfix(Sequence);
+
+    //Commenting this out for now, as it's not needed.
+
+    // * Used for debugging infix to postfix conversion
+    /*
+    for(Int i=1;i<postfix->size+1;i++)
+    {
+        printf("Postfix: %s\n",ASTreeTypeToString(postfix->trees[i]->type));
+    }
+    */
+
+    //DestroyASTreeArray(Sequence);
+    
+
+    // convert the postfix notation to a tree
+    NodeArrayType* stack=InitNodeArray(sizeof(struct ASTreeStructure));
+    ASTreeType* A;
+    ASTreeType* B;
+
+    for(Int i=1;i<postfix->size+1;++i)
+    {
+        if(ArithIsOprnd(postfix->trees[i])==1)
+        {
+            AppendNodeArray(stack,postfix->trees[i]);
+        }
+        else
+        {
+            B=PopNodeArray(stack);
+            A=PopNodeArray(stack);
+
+            postfix->trees[i]->arithleft=A;
+            postfix->trees[i]->arithright=B;
+
+            AppendNodeArray(stack,postfix->trees[i]);
+        }
+    }
+
+    ASTreeType* AST=PopNodeArray(stack);
+
+    return AST;
+}
+
+NodeArrayType* ParserParseClosure(ParserType* parser)
+{
+    ParserAdvanceToken(parser,TOKEN_LPAREN); // "("
+
+    NodeArrayType* line=InitNodeArray(sizeof(struct ASTreeStructure));
+
+    ASTreeType* leftParen=InitASTree(AST_PLACEHOLDER);
+    leftParen->value.char_value='(';
+    AppendNodeArray(line,leftParen);
+
+    while(parser->CurrentToken->type!=TOKEN_RPAREN)
+    {
+        if(parser->CurrentToken->type!=TOKEN_LPAREN)
+            AppendNodeArray(line,ParserParseExpression(parser));
+        else
+        {
+            NodeArrayType* closure=ParserParseClosure(parser);
+
+            for(Int i=1;i<closure->size;i++)
+            {
+                AppendNodeArray(line,closure->trees[i]);
+            }
+
+        }
+
+        if(parser->CurrentToken->type==TOKEN_COMMA)
+        {
+            ParserAdvanceToken(parser,TOKEN_COMMA);
+        }
+    }
+    ParserAdvanceToken(parser,TOKEN_RPAREN); // ")"
+
+    ASTreeType* rightParen=InitASTree(AST_PLACEHOLDER);
+    rightParen->value.char_value=')';
+    AppendNodeArray(line,rightParen);
+
+    return line;
 }
 
 ASTreeType* ParserParseFunction(ParserType* parser)

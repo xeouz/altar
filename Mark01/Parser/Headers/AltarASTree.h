@@ -2,6 +2,7 @@
 #define ASTREES
 
 #include "Integers.h"
+#include "AltarTokens.h"
 
 typedef struct NodeArrayStructure NodeArrayType;
 
@@ -48,8 +49,16 @@ typedef struct ASTreeStructure
 
 		AST_PARENTHESIS,
 
+		AST_ADD,
+		AST_SUB,
+		AST_MUL,
+		AST_DIV,
+		AST_MOD,
+		AST_FLR,
+
 		AST_SHIFTLN,
 		AST_BLOCK,
+		AST_PLACEHOLDER,
 		AST_ROOT
 	}type;
 
@@ -111,8 +120,16 @@ typedef struct ASTreeStructure
 	struct ASTreeStructure* funcbody;
 	struct ASTreeStructure* classbody;
 
+	struct ASTreeStructure* arithleft;
+	struct ASTreeStructure* arithright;
+
+	TokenType* leftexpr;
+	TokenType* rightexpr;
+
 	struct NodeArrayStructure* RootValue;
 }ASTreeType;
+
+char* ASTreeTypeToString(Int tree);
 
 // Initialization
 ASTreeType* InitASTree(char type);
