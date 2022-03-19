@@ -106,7 +106,7 @@ NodeArrayType* ParserParseParenthesis(ParserType* parser)
     }
 
     ASTreeType* statement=ParserParseExpression(parser);
-
+ 
     AppendNodeArray(parenthesis,statement);
 
     while(parser->CurrentToken->type==TOKEN_COMMA)
@@ -138,6 +138,9 @@ ASTreeType* ParserParseStatement(ParserType* parser)
     {
         case TOKEN_ID: AST=ParserParseIdentifier(parser);break;
         case TOKEN_INTEGER: AST=ParserParseInteger(parser);break;
+
+        case TOKEN_INCR: AST=ParserParsePreIncrDecr(parser, 0);break;
+        case TOKEN_DECR: AST=ParserParsePreIncrDecr(parser, 1);break;
 
         case TOKEN_ADD: AST=ParserParseArithmetic(parser);break;
         case TOKEN_SUB: AST=ParserParseArithmetic(parser);break;
@@ -373,6 +376,10 @@ ASTreeType* ParserParseExpression(ParserType* parser)
         case TOKEN_FLOAT: AST=ParserParseFloat(parser);break;
         case TOKEN_CHAR: AST=ParserParseCharacter(parser);break;
         case TOKEN_BOOL: AST=ParserParseBool(parser);break;
+        case TOKEN_LBRACK: AST=ParserParseArray(parser);break;
+
+        case TOKEN_INCR: AST=ParserParsePreIncrDecr(parser, 0);break;
+        case TOKEN_DECR: AST=ParserParsePreIncrDecr(parser, 1);break;
 
         case TOKEN_ADD: AST=ParserParseArithmetic(parser);break;
         case TOKEN_SUB: AST=ParserParseArithmetic(parser);break;
@@ -388,15 +395,14 @@ ASTreeType* ParserParseExpression(ParserType* parser)
     return AST;
 }
 
-ASTreeType* ParserParseAssignment(ParserType* parser)
+ASTreeType* ParserParseAssignment(ParserType* parser, ASTreeType* variable)
 {
-    ASTreeType* assignment=InitASTree(AST_VARIABLE_ASSIGNMENT);
-
     ParserAdvanceToken(parser,TOKEN_EQUALS);
 
-    assignment->tree_child=ParserParseExpression(parser);
+    variable->tree_child=ParserParseExpression(parser);
+    variable->opts.assignment=1;
 
-    return assignment;
+    return variable;
 }
 
 /*
@@ -510,11 +516,43 @@ ASTreeType* ParserParseVariable(ParserType* parser)
     }
     else if(parser->CurrentToken->type==TOKEN_EQUALS)
     {
-        return ParserParseAssignment(parser);
+        ASTreeType* variable=InitASTree(AST_VARIABLE);
+        variable->name.variable_name=variableName;
+
+        return ParserParseAssignment(parser, variable);
     }
     else if(parser->CurrentToken->type==TOKEN_LPAREN)
     {
         return ParserParseFunctionCall(parser);
+    }
+    else if(parser->CurrentToken->type==TOKEN_LBRACK)
+    {
+        ASTreeType* variable=InitASTree(AST_VARIABLE);
+        variable->name.variable_name=variableName;
+
+        ASTreeType* access= ParserParseBlockAccess(parser, variable);
+
+        if(parser->CurrentToken->type==TOKEN_EQUALS)
+        {
+            access->tree_child=ParserParseAssignment(parser, access->tree_child);
+        }
+        return access;
+    }
+    else if(parser->CurrentToken->type==TOKEN_INCR)
+    {
+        ParserAdvanceToken(parser,TOKEN_INCR);
+        ASTreeType* variable=InitASTree(AST_VARIABLE_INCREMENT);
+        variable->name.variable_name=variableName;
+        variable->opts.preincrement_decrement=1; // post increment
+        return variable;
+    }
+    else if(parser->CurrentToken->type==TOKEN_DECR)
+    {
+        ParserAdvanceToken(parser,TOKEN_DECR);
+        ASTreeType* variable=InitASTree(AST_VARIABLE_DECREMENT);
+        variable->name.variable_name=variableName;
+        variable->opts.preincrement_decrement=1; // post decrement
+        return variable;
     }
 
     // Create the variable ASTree and set the name
@@ -592,6 +630,49 @@ ASTreeType* ParserParseBool(ParserType* parser)
     ParserAdvanceToken(parser,TOKEN_BOOL);
 
     // Return the boolean ASTree
+    return AST;
+}
+
+ASTreeType* ParserParseArray(ParserType* parser)
+{
+    ASTreeType* AST=InitASTree(AST_ARRAY);
+
+    AST->RootValue=InitNodeArray(sizeof(struct ASTreeStructure));
+
+    ParserAdvanceToken(parser,TOKEN_LBRACK);
+
+    AppendNodeArray(AST->RootValue,ParserParseExpression(parser));
+
+    while(parser->CurrentToken->type==TOKEN_COMMA)
+    {
+        ParserAdvanceToken(parser,TOKEN_COMMA);
+        AppendNodeArray(AST->RootValue,ParserParseExpression(parser));
+    }
+
+    ParserAdvanceToken(parser,TOKEN_RBRACK);
+
+    return AST;
+}
+
+ASTreeType* ParserParseBlockAccess(ParserType* parser, ASTreeType* variable)
+{
+    ASTreeType* AST=InitASTree(AST_BLOCK_ACCESS);
+
+    ParserAdvanceToken(parser,TOKEN_LBRACK);
+    variable->blockaccess=ParserParseExpression(parser);
+    ParserAdvanceToken(parser,TOKEN_RBRACK);
+
+    AST->tree_child=variable;
+    return AST;
+}
+
+ASTreeType* ParserParsePreIncrDecr(ParserType* parser, char incrOrDecr)
+{
+    ParserAdvanceToken(parser,incrOrDecr==0?TOKEN_INCR:TOKEN_DECR);
+    ASTreeType* AST=InitASTree(incrOrDecr==0?AST_VARIABLE_INCREMENT:AST_VARIABLE_DECREMENT);
+    AST->opts.preincrement_decrement=0; // pre increment/decrement
+    AST->tree_child=ParserParseVariable(parser);
+
     return AST;
 }
 

@@ -28,11 +28,11 @@ typedef struct ASTreeStructure
 		AST_INTEGER,
 		AST_FLOAT,
 		AST_BOOL,
+		AST_ARRAY,
+		AST_BLOCK_ACCESS,
 
-		AST_VARIABLE_OPERATION,
-
-		AST_INCREMENT,
-		AST_DECREMENT,
+		AST_VARIABLE_INCREMENT,
+		AST_VARIABLE_DECREMENT,
 
 		AST_IF,
 		AST_ELSE,
@@ -104,6 +104,14 @@ typedef struct ASTreeStructure
 		char* function_def_return_type;
 	}val_type;
 
+	union 
+	{
+		char variable_def_is_const;
+		char preincrement_decrement;
+		char assignment;
+	}opts;
+	
+
 	struct ASTreeStructure* ifexpr;
 	struct ASTreeStructure* ifbody;
 	struct ASTreeStructure* ifelse;
@@ -122,6 +130,8 @@ typedef struct ASTreeStructure
 
 	struct ASTreeStructure* arithleft;
 	struct ASTreeStructure* arithright;
+
+	struct ASTreeStructure* blockaccess;
 
 	TokenType* leftexpr;
 	TokenType* rightexpr;

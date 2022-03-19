@@ -28,10 +28,8 @@ char* ASTreeTypeToString(Int type)
 		case AST_FLOAT: return "AST_FLOAT";
 		case AST_BOOL: return "AST_BOOL"; 
 
-		case AST_VARIABLE_OPERATION: return "AST_VARIABLE_OPERATION";
-
-		case AST_INCREMENT: return "AST_INCREMENT";
-		case AST_DECREMENT: return "AST_DECREMENT";
+		case AST_VARIABLE_INCREMENT: return "AST_VARIABLE_INCREMENT";
+		case AST_VARIABLE_DECREMENT: return "AST_VARIABLE_DECREMENT";
 
 		case AST_IF: return "AST_IF";
 		case AST_ELSE: return "AST_ELSE"; 

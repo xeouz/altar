@@ -49,12 +49,15 @@ ASTreeType* ParserParseVariable(ParserType* parser);
 ASTreeType* ParserParseVariableDeclaration(ParserType* parser);
 ASTreeType* ParserParseMultiVariableDeclaration(ParserType* parser);
 ASTreeType* ParserParseVariableDeclarationHelper(ParserType* parser, ASTreeType* AST);
-ASTreeType* ParserParseVariableAssignment(ParserType* parser);
+ASTreeType* ParserParseAssignment(ParserType* parser, ASTreeType* variable);
 ASTreeType* ParserParseInteger(ParserType* parser);
 ASTreeType* ParserParseFloat(ParserType* parser);
 ASTreeType* ParserParseString(ParserType* parser);
 ASTreeType* ParserParseCharacter(ParserType* parser);
 ASTreeType* ParserParseBool(ParserType* parser);
+ASTreeType* ParserParseArray(ParserType* parser);
+ASTreeType* ParserParseBlockAccess(ParserType* parser ,ASTreeType* variable);
+ASTreeType* ParserParsePreIncrDecr(ParserType* parser, char incrOrDecr);
 
 ASTreeType* ParserParseIf(ParserType* parser);
 ASTreeType* ParserParseFunction(ParserType* parser);
