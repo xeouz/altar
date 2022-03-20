@@ -21,7 +21,7 @@ ParserType* InitParser(LexerType* lexer)
     parser->lexer = lexer;
     parser->CurrentToken = LexerAdvanceToken(parser->lexer);
     parser->PreviousToken = parser->CurrentToken;
-    parser->PreviousAST = InitASTree(AST_SHIFTLN);
+    parser->PreviousAST = InitASTree(AST_ENDL);
 
     return parser;
 }
@@ -148,7 +148,7 @@ ASTreeType* ParserParseStatement(ParserType* parser)
         case TOKEN_DIV: AST=ParserParseArithmetic(parser);break;
         case TOKEN_MOD: AST=ParserParseArithmetic(parser);break;
 
-        default: AST=InitASTree(AST_SHIFTLN); break;
+        default: AST=InitASTree(AST_ENDL); break;
     }
 
     return AST;
@@ -404,15 +404,6 @@ ASTreeType* ParserParseAssignment(ParserType* parser, ASTreeType* variable)
 
     return variable;
 }
-
-/*
-
-ASTreeType* ParserParseFactor(ParserType* parser)
-{
-
-}
-
-*/
 
 ASTreeType* ParserParseReturn(ParserType* parser)
 {

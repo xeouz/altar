@@ -56,7 +56,7 @@ typedef struct ASTreeStructure
 		AST_MOD,
 		AST_FLR,
 
-		AST_SHIFTLN,
+		AST_ENDL,
 		AST_BLOCK,
 		AST_PLACEHOLDER,
 		AST_ROOT

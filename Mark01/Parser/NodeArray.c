@@ -74,6 +74,19 @@ ASTreeType* PopNodeArray(NodeArrayType* Array)
 }
 
 // -- Destruction --
+void ClearNodeArray(NodeArrayType* Array)
+{
+    if(Array->trees)
+    {
+        while(Array->size>0)
+        {
+            DestroyASTree(PopNodeArray(Array));
+        }
+    }
+
+    Array->size=0;
+}
+
 void DestroyNodeArray(NodeArrayType* Array)
 {
     for(Int i=0;i<Array->size;++i)

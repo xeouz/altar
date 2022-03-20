@@ -1,5 +1,5 @@
-#ifndef PARSERS
-#define PARSERS
+#ifndef PARSERH
+#define PARSERH
 
 #include "AltarLexer.h"
 #include "AltarTokens.h"
@@ -36,8 +36,6 @@ ASTreeType* ParserParseRoot(ParserType* parser);
 ASTreeType* ParserParseStatement(ParserType* parser);
 ASTreeType* ParserParseStatements(ParserType* parser);
 ASTreeType* ParserParseExpression(ParserType* parser);
-ASTreeType* ParserParseFactor(ParserType* parser);
-ASTreeType* ParserParseTerm(ParserType* parser, TokenType* term);
 ASTreeType* ParserParseBlock(ParserType* parser);
 
 ASTreeType* ParserParseReturn(ParserType* parser);

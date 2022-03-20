@@ -1,5 +1,5 @@
-#ifndef STANDARDS
-#define STANDARDS
+#ifndef STANDARDH
+#define STANDARDH
 
 #include <stdint.h>
 

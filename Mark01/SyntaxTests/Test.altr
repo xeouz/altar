@@ -1,1 +1,1 @@
-print(++i++);
+var foo:char ='c';

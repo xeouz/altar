@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "Headers/AltarVisitor.h"
+#include "AltarVisitor.c"
 
 #include "../Parser/IncludeLinker.h"
 
@@ -27,9 +28,17 @@ int main()
 
     printf("Root Size: %d\n",root->RootValue->size);
 
-    //DestroyASTree(root);
-    //DestroyParser(parser);
-    //DestroyFile(file);
+    /* Destroy Lexer and Parser
+     * Currently encounters errors, dangerous!
+
+    DestroyASTree(root);
+    DestroyParser(parser);
+    DestroyFile(file);
+
+    */
+
+    VisitorType* visitor=InitVisitor();
+    VisitorTraverseRoot(visitor,root);  // This is the main function that will be called by the compiler
 
     return 0;
 }

@@ -14,6 +14,19 @@ IOFile* InitIO(char* srcname)
 	file->src=srcname;
 	file->strsz=0;
 	file->filesz=0;
+	file->writing=0;
+
+	return file;
+}
+
+IOFile* InitNewIOFile(char* name)
+{
+	IOFile* file=calloc(1,sizeof(struct FileStructure));
+	file->src=name;
+	file->strsz=0;
+	file->filesz=0;
+	file->line=0;
+	file->writing=1;
 
 	return file;
 }
@@ -48,9 +61,35 @@ void IOReadFile(IOFile* file)
 	}
 }
 
+void WriteIOFile(IOFile* file, char* data)
+{
+	if(file->writing==1)
+	{
+		file->data=realloc(file->data,file->filesz+strlen(data)+1);
+		strcpy(file->data+file->filesz,data);
+		file->filesz+=strlen(data);
+	}
+}
+
+void SaveIOFile(IOFile* file)
+{
+	FILE* fileobj=fopen(file->src,"w");
+
+	if(fileobj!=NULL)
+	{
+		fwrite(file->data,1,file->filesz,fileobj);
+		fclose(fileobj);
+	}
+	else
+	{
+		printf("File Not Found: %s\n",file->src);
+		exit(1);
+	}
+}
+
 // -- Destruction --
 void DestroyFile(IOFile* file)
-{
+{	
 	free(file->data);
 	free(file);
 }

@@ -1,5 +1,5 @@
-#ifndef TOKENS
-#define TOKENS
+#ifndef TOKENH
+#define TOKENH
 
 #include "Integers.h"
 

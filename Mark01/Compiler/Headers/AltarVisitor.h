@@ -1,23 +1,46 @@
-#ifndef VISITORS
-#define VISITORS
+#ifndef VISITORH
+#define VISITORH
 
 #include "../../Parser/IncludeLinker.h"
 
-ASTreeType* VisitorVisitNode(ASTreeType* node);
+typedef struct VisitorStructure
+{
+    struct 
+    {
+        NodeArrayType* global;
+        NodeArrayType* class_local;
+        NodeArrayType* func_local;
+    }scope;
 
-ASTreeType* VisitorVisitVariable(ASTreeType* node);
-ASTreeType* VisitorVisitVariableDeclaration(ASTreeType* node);
-ASTreeType* VisitorVisitVariableAssignment(ASTreeType* node);
+    struct 
+    {
+        char** includes;
+        Int includes_length;
 
-ASTreeType* VisitorVisitFunctionCall(ASTreeType* node);
-ASTreeType* VisitorVisitFunctionDeclaration(ASTreeType* node);
+        char** dynamic_vars;
+        Int dynamic_vars_length;
 
-ASTreeType* VisitorVisitString(ASTreeType* node);
-ASTreeType* VisitorVisitCharacter(ASTreeType* node);
-ASTreeType* VisitorVisitInteger(ASTreeType* node);
-ASTreeType* VisitorVisitFloat(ASTreeType* node);
-ASTreeType* VisitorVisitBool(ASTreeType* node);
+        char** declared_vars;
+        Int declared_vars_length;
+    }memory;
 
-ASTreeType* VisitorVisitRoot(ASTreeType* node);
+    char* code;
+    Int code_length;
+}VisitorType;
+
+VisitorType* InitVisitor();
+
+void VisitorAddIncludes(VisitorType* visitor, char* include);
+char VisitorInIncludes(VisitorType* visitor, char* include);
+
+char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root);
+
+char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node);
+
+char* VisitorTraverseVariable(VisitorType* visitor, ASTreeType* node);
+char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node);
+char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node);
+
+char* VisitorTraverseFunctionCall(VisitorType* visitor, ASTreeType* node);
 
 #endif

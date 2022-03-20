@@ -1,5 +1,5 @@
-#ifndef ASTARRAYS
-#define ASTARRAYS
+#ifndef ASTARRAYH
+#define ASTARRAYH
 
 #include "Integers.h"
 #include "AltarASTree.h"
@@ -24,6 +24,7 @@ ASTreeType* GetNodeArray(NodeArrayType* Array, SInt index);
 ASTreeType* PopNodeArray(NodeArrayType* Array);
 
 // Destruction
+void ClearNodeArray(NodeArrayType* Array);
 void DestroyNodeArray(NodeArrayType* Array);
 void DestroyASTreeArray(NodeArrayType* Array);
 

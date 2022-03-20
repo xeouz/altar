@@ -5,6 +5,7 @@
 
 #include "AltarLexer.c"
 #include "AltarParser.c"
+#include "AltarASTree.c"
 
 #include "IO.c"
 

@@ -53,7 +53,7 @@ char* ASTreeTypeToString(Int type)
 		case AST_MOD: return "AST_MOD";
 		case AST_FLR: return "AST_FLR";
 
-		case AST_SHIFTLN: return "AST_SHIFTLN";
+		case AST_ENDL: return "AST_ENDL";
 		case AST_BLOCK: return "AST_BLOCK";
 		case AST_PLACEHOLDER: return "AST_PLACEHOLDER";
 		case AST_ROOT: return "AST_ROOT";

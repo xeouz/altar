@@ -3,7 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/Mark-1/src/**"
+                "${workspaceFolder}/Mark01/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
@@ -16,10 +16,7 @@
                     "${workspaceFolder}/**"
                 ],
                 "limitSymbolsToIncludedHeaders": true
-            },
-            "forcedInclude": [
-                "${workspaceFolder}/Mark-1/src/Headers/AltarTokens.h"
-            ]
+            }
         }
     ],
     "version": 4
