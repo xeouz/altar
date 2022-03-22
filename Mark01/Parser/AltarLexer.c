@@ -451,7 +451,7 @@ TokenType* LexerGatherIdentifier(LexerType* lexer)
 	char* value=calloc(1,1);
 
 	// While the current character is alpha numeric
-	while(isalnum(lexer->cursor))
+	while(isalnum(lexer->cursor)||lexer->cursor=='_'||lexer->cursor=='$')
 	{
 		// Reallocating the string
 		value=realloc(value,strlen(value)+2);

@@ -493,7 +493,7 @@ ASTreeType* ParserParseVariable(ParserType* parser)
     {
         ParserAdvanceToken(parser,TOKEN_COLON);
 
-        ASTreeType* variable=InitASTree(AST_VARIABLE);
+        ASTreeType* variable=InitASTree(AST_VARIABLE_DECLARATION);
         variable->name.variable_name=variableName;
         variable->val_type.variable_def_value_type=parser->CurrentToken->value;
 
@@ -507,7 +507,7 @@ ASTreeType* ParserParseVariable(ParserType* parser)
     }
     else if(parser->CurrentToken->type==TOKEN_EQUALS)
     {
-        ASTreeType* variable=InitASTree(AST_VARIABLE);
+        ASTreeType* variable=InitASTree(AST_VARIABLE_ASSIGNMENT);
         variable->name.variable_name=variableName;
 
         return ParserParseAssignment(parser, variable);
@@ -518,7 +518,7 @@ ASTreeType* ParserParseVariable(ParserType* parser)
     }
     else if(parser->CurrentToken->type==TOKEN_LBRACK)
     {
-        ASTreeType* variable=InitASTree(AST_VARIABLE);
+        ASTreeType* variable=InitASTree(AST_BLOCK_ACCESS);
         variable->name.variable_name=variableName;
 
         ASTreeType* access= ParserParseBlockAccess(parser, variable);

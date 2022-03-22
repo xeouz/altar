@@ -3,21 +3,23 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "Headers/AltarVisitor.h"
 
 VisitorType* InitVisitor()
 {
     VisitorType* visitor=calloc(1,sizeof(VisitorType));
-    visitor->scope.global=NULL;
-    visitor->scope.class_local=NULL;
-    visitor->scope.func_local=NULL;
+    visitor->scope.current_scope='g';
+    visitor->scope.global=InitNodeArray(sizeof(struct ASTreeStructure));
+    visitor->scope.class_local=InitNodeArray(sizeof(struct ASTreeStructure));
+    visitor->scope.func_local=InitNodeArray(sizeof(struct ASTreeStructure));
     visitor->code="";
     visitor->code_length=0;
     visitor->memory.includes=NULL;
     visitor->memory.includes_length=0;
-    visitor->memory.dynamic_vars=NULL;
-    visitor->memory.dynamic_vars_length=0;
+    visitor->memory.std_includes.boost_any=0;
+    visitor->memory.std_includes.iostream=0;
     return visitor;
 }
 
@@ -48,11 +50,67 @@ char VisitorInIncludes(VisitorType* visitor, char* include)
     return 0;
 }
 
+char VisitorVariableDeclared(VisitorType* visitor, NodeArrayType* scope, char* var)
+{
+    for(Int i=1;i<scope->size+1;++i)
+    {
+        if(i>scope->size)
+        {
+            return 0;
+        }
+
+        if(strcmp(scope->trees[i]->name.variable_def_name,var)==0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+char* VisitorGetVariableType(VisitorType* visitor, NodeArrayType* scope, char* var)
+{
+    for(Int i=1;i<scope->size+1;++i)
+    {
+        if(i>scope->size)
+        {
+            return "";
+        }
+
+        if(strcmp(scope->trees[i]->name.variable_def_name,var)==0)
+        {
+            return scope->trees[i]->val_type.variable_def_value_type;
+        }
+    }
+    return "";
+}
+
+ASTreeType* VisitorGetVariable(VisitorType* visitor, NodeArrayType* scope, char* var)
+{
+    for(Int i=1;i<scope->size+1;++i)
+    {
+        if(i>scope->size)
+        {
+            return 0;
+        }
+
+        if(strcmp(scope->trees[i]->name.variable_def_name,var)==0)
+        {
+            return scope->trees[i];
+        }
+    }
+    return 0;
+}
+
 // ---
 
 char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root)
-{
-    VisitorTraverseVariableDeclaration(visitor,root->RootValue->trees[1]);
+{   
+    // Traversing every node
+
+    for(Int i=1;i<root->RootValue->size;++i)
+    {
+        VisitorTraverseNode(visitor,root->RootValue->trees[i]);
+    }
 
     return "";
 }
@@ -64,148 +122,185 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
         case AST_VARIABLE: return VisitorTraverseVariable(visitor,node);
         case AST_VARIABLE_DECLARATION: return VisitorTraverseVariableDeclaration(visitor,node);
         case AST_VARIABLE_ASSIGNMENT: return VisitorTraverseVariableAssignment(visitor,node);
+        case AST_MULTI_VARIABLE_DECLARATION: return VisitorTraverseMultiVariableDeclaration(visitor,node);
 
         case AST_FUNCTION_CALL: return VisitorTraverseFunctionCall(visitor,node);
 
-        default: printf("Unknown Node Type: %d\n",node->type); exit(1); return NULL;
+        case AST_INTEGER: {
+            char* code=calloc(1,1);
+            sprintf(code,"%d",node->value.integer_value);
+            return code;
+        }
+
+        default: printf("Unknown Node Type: %s\n",ASTreeTypeToString(node->type)); exit(1); return NULL;
     }
 }
 
 char* VisitorTraverseVariable(VisitorType* visitor, ASTreeType* node)
 {
-    return "";
+    NodeArrayType* scope;
+    switch(visitor->scope.current_scope)
+    {
+        case 'g': scope=visitor->scope.global; break;
+        case 'c': scope=visitor->scope.class_local; break;
+
+        default: scope=visitor->scope.func_local; break;
+    }
+    if(!VisitorVariableDeclared(visitor,scope,node->name.variable_name))
+    {
+        printf("Variable %s not declared\n",node->name.variable_name);
+        exit(1);
+        return NULL;
+    }
+    return node->name.variable_name;
 }
 
 char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
-{
-
-    if(visitor->memory.declared_vars_length==0)
-    {
-        visitor->memory.declared_vars=calloc(1,sizeof(char*));
-        visitor->memory.declared_vars_length=1;
-        visitor->memory.declared_vars[0]=node->name.variable_def_name;
-    }
-    else
-    {
-        for(Int i=0;i<visitor->memory.declared_vars_length;i++)
-        {
-            if(strcmp(visitor->memory.declared_vars[i],node->name.variable_def_name)==0)
-            {
-                printf("Variable %s already declared\n",node->name.variable_def_name);
-                exit(1);
-                return NULL;
-            }
-        }
-        visitor->memory.declared_vars=realloc(visitor->memory.declared_vars,(visitor->memory.declared_vars_length+1)*sizeof(char*));
-        ++visitor->memory.declared_vars_length;
-        visitor->memory.declared_vars[visitor->memory.declared_vars_length-1]=node->name.variable_def_name;
-    }
-
-    // Variable type determination
+{   
+    // Declare variables
+    char* variable_name="";
     char* variable_type="";
+    char* variable_value="";
+    char* variable="";
+
+    char explicit_value=0, free_variable_value=0;
+    NodeArrayType* scope;
+
+    // Check for the scope and assign the current scope
+    switch(visitor->scope.current_scope)
+    {
+        case 'g': scope=visitor->scope.global; break;
+        case 'c': scope=visitor->scope.class_local; break;
+        default: scope=visitor->scope.func_local; break;
+    }
+
+    // Check if the variable is already declared
+    if(VisitorVariableDeclared(visitor,scope,node->name.variable_def_name))
+    {
+        printf("Variable %s already declared\n",node->name.variable_def_name);
+        exit(1);
+        return NULL;
+    }
+
+    if(node->tree_child!=NULL)
+        explicit_value=1;
+
+    // - Variable name
+    variable_name=node->name.variable_def_name;
+
+    // - Variable type
     if(node->val_type.variable_def_value_type==NULL)
     {
-        switch(node->tree_child->type)
+        if(node->tree_child==NULL)
         {
-            case AST_INTEGER: variable_type="int"; break;
-            case AST_FLOAT: variable_type="float"; break;
-            case AST_STRING: variable_type="std::string"; break;
-            case AST_BOOL: variable_type="bool"; break;
-            default: variable_type="auto"; break;
-        }
-    }
-    else
-    {
-        char* type=node->val_type.variable_def_value_type;
-        type=type;
-        
-        if(strcmp(type,"int")==0)
-        {
-            variable_type="int";
-        }
-        else if(strcmp(type,"float")==0)
-        {
-            variable_type="float";
-        }
-        else if(strcmp(type,"string")==0)
-        {
-            variable_type="std::string";
-        }
-        else if(strcmp(type,"char")==0)
-        {
-            variable_type="char";
-        }
-        else if(strcmp(type,"bool")==0)
-        {
-            variable_type="bool";
-        }
-        else if(strcmp(type,"any")==0)
-        {
-            VisitorAddIncludes(visitor,"<boost/any.hpp>");
+            visitor->memory.std_includes.boost_any=1;
             variable_type="boost::any";
         }
         else
         {
-            variable_type="auto";
+            switch(node->tree_child->type)
+            {
+                case AST_INTEGER: variable_type="int"; free_variable_value=1; break;
+                case AST_FLOAT: variable_type="float"; free_variable_value=1; break;
+                case AST_CHARACTER: variable_type="char"; break;
+                case AST_BOOL: variable_type="bool"; break;
+                case AST_STRING: {
+                    variable_type="std::string";
+                    visitor->memory.std_includes.string=1;
+                    break;
+                }
+
+                case AST_VARIABLE: {
+                    variable_type=VisitorGetVariableType(visitor,scope,node->tree_child->name.variable_name);
+                    break;
+                }
+
+                default: printf("Unknown Variable Type: %d\n",node->tree_child->type); exit(1); return NULL;
+            }
         }
     }
-
-    // Variable name
-    char* variable_name=node->name.variable_def_name;
-
-    // Variable value
-    char* variable_value=calloc(1,1);
-    switch(node->tree_child->type)
+    else
     {
-        case AST_BOOL: {
-            if(node->tree_child->value.bool_value==1)
-            {
-                variable_value=realloc(variable_value,5);
-                strcpy(variable_value,"true");
-            }
-            else
-            {
-                variable_value=realloc(variable_value,6);
-                strcpy(variable_value,"false");
-            }
-            break;
+        if(strcmp(node->val_type.variable_def_value_type,"any")==0)
+        {
+            variable_type="boost::any";
+            visitor->memory.std_includes.boost_any=1;
         }
-        case AST_INTEGER: sprintf(variable_value,"%d",node->tree_child->value.integer_value); break;
-        case AST_ARRAY: {
-            variable_value="";
-            break;
+        else if(strcmp(node->val_type.variable_def_value_type,"str")==0)
+        {
+            variable_type="std::string";
+            visitor->memory.std_includes.string=1;
         }
-        case AST_STRING: {
-            char temp[strlen(node->tree_child->value.string_value)+3];
-            sprintf(temp,"\"%s\"",node->tree_child->value.string_value);
-            variable_value=realloc(variable_value,strlen(temp)+1);
-            strcpy(variable_value,temp);
-            break;
+        else
+        {
+            variable_type=node->val_type.variable_def_value_type;
         }
-        case AST_CHARACTER: {
-            sprintf(variable_value,"'%c'",(char)node->tree_child->value.char_value);
-            break;
-        }
+    }
+    node->val_type.variable_def_value_type=variable_type;
 
-        default: printf("Unknown Variable Value Type: %s\n",ASTreeTypeToString(node->tree_child->type)); exit(1); return NULL;
+    // - Variable value
+    if(explicit_value)
+    {
+        variable_value=VisitorTraverseNode(visitor,node->tree_child);
     }
 
-    char* variable = calloc(1,1);
-    char temp[strlen(variable_type)+strlen(variable_name)+strlen(variable_value)+100];
-    sprintf(temp,"%s %s = %s;\n",variable_type,variable_name,variable_value);
-    variable=realloc(variable,strlen(temp)+1);
-    strcpy(variable,temp);
+    // - Variable 
 
-    free(variable_value);
+    /* Apply the corresponding format to the variable
 
-    printf("%s",variable);
+     * type name = value;
 
+     * sprintf() will format the string 
+     * and assign it to the variable
+    */
+    //sprintf(variable,"%s %s = %s;",variable_type,variable_name,variable_value);
+    variable=calloc(1,1);
+    if(explicit_value)
+    {
+        sprintf(variable,"%s %s = %s;",variable_type,variable_name,variable_value);
+    }
+    else
+    {
+        sprintf(variable,"%s %s;",variable_type,variable_name);
+    }
+
+    if(free_variable_value)
+    {
+        free(variable_value);
+    }
+    
+    // Reset the original scope
+    switch(visitor->scope.current_scope)
+    {
+        case 'g': visitor->scope.global=scope; break;
+        case 'c': visitor->scope.class_local=scope; break;
+        default: visitor->scope.func_local=scope; break;
+    }
+
+    AppendNodeArray(scope,node);
+    
     return variable;
 }
 
 char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
 {
     return "";
+}
+
+char* VisitorTraverseMultiVariableDeclaration(VisitorType* visitor, ASTreeType* node)
+{
+    char* statement = calloc(1,1);
+
+    for(Int i=1;i<node->RootValue->size+1;i++)
+    {
+        if(i>node->RootValue->size)
+            return "";
+
+        strcat(statement,VisitorTraverseVariableDeclaration(visitor,node->RootValue->trees[i]));
+        strcat(statement,"\n");
+    }
+
+    return statement;
 }
 
 char* VisitorTraverseFunctionCall(VisitorType* visitor, ASTreeType* node)
