@@ -284,7 +284,90 @@ char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
 
 char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
 {
-    return "";
+    NodeArrayType* scope;
+    switch(visitor->scope.current_scope)
+    {
+        case 'g': scope=visitor->scope.global; break;
+        case 'c': scope=visitor->scope.class_local; break;
+        default: scope=visitor->scope.func_local; break;
+    }
+
+    // Checking if the variable is declared
+    if(!VisitorVariableDeclared(visitor,scope,node->name.variable_name))
+    {
+        printf("Variable %s not declared\n",node->name.variable_name);
+        exit(1);
+        return NULL;
+    }
+
+    char* variable_name=node->name.variable_name;
+    ASTreeType* variable=VisitorGetVariable(visitor,scope,variable_name);
+
+    char diff_type=0;
+
+    // Checking definition type
+    switch(node->tree_child->type)
+    {
+        case AST_INTEGER: {
+            if(strcmp(variable->val_type.variable_def_value_type,"int")!=0)
+                diff_type=1;
+            break;
+        }
+
+        case AST_CHARACTER: {
+            if(strcmp(variable->val_type.variable_def_value_type,"char")!=0)
+                diff_type=1;
+            break;
+        }
+
+        case AST_FLOAT: {
+            if(strcmp(variable->val_type.variable_def_value_type,"float")!=0)
+                diff_type=1;
+            break;
+        }
+
+        case AST_BOOL: {
+            if(strcmp(variable->val_type.variable_def_value_type,"bool")!=0)
+                diff_type=1;
+            break;
+        }
+
+        case AST_STRING: {
+            if(strcmp(variable->val_type.variable_def_value_type,"std::string")!=0)
+                diff_type=1;
+            break;
+        }
+
+        case AST_VARIABLE: {
+            char* type=VisitorGetVariableType(visitor,scope,node->name.variable_name);
+            if(strcmp(type,"boost::any")==0)
+                diff_type=0;
+            else if(strcmp(VisitorGetVariableType(visitor,scope,node->tree_child->name.variable_name),type)!=0)
+            {
+                diff_type=1;
+            }
+            break;
+        }
+
+        default: printf("Unknown Variable Type: %s\n",ASTreeTypeToString(node->tree_child->type)); exit(1); return NULL;
+    }
+
+    char* variable_value;
+
+    variable_value=VisitorTraverseNode(visitor,node->tree_child);
+
+    if(diff_type)
+    {
+        printf("Variable %s cannot be assigned %s\n",variable_name,variable_value);
+        exit(1);
+        return NULL;
+    }
+
+    char* variable_str=calloc(1,1);
+
+    sprintf(variable_str,"%s = %s;",variable_name,variable_value);
+
+    return variable_str;
 }
 
 char* VisitorTraverseMultiVariableDeclaration(VisitorType* visitor, ASTreeType* node)
