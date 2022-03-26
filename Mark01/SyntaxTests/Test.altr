@@ -1,0 +1,11 @@
+var mytext = "Hello World";
+
+func printtext(text:str)
+{
+    echo(text);
+}
+
+func main()
+{
+    printtext(mytext);
+}

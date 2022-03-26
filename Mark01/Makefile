@@ -3,9 +3,10 @@ outfldr= ./Executable
 srcfile= main.c
 src= $(srcfldr)/$(srcfile)
 dst= $(outfldr)/runner.exe
-Cflags= -Wall -Werror -g 
+Cflags= -Wall -Werror -g -lm 
+CDFlags = -fsanitize=address
 
-Vflags= --track-origins=yes --leak-check=full
+Vflags= --track-origins=yes --leak-check=full --memcheck --leak-resolution=high
 
 Gflags= -f
 clean:
@@ -16,4 +17,4 @@ run:
 push:
 	sudo git push github $(Gflags)
 grind:
-	sudo valgrind $(dst)
+	sudo valgrind $(dst) $(Vflags)

@@ -95,7 +95,7 @@ typedef struct ASTreeStructure
 		char char_value;
 		SInt integer_value;
 		IChar bool_value;
-		float float_value;
+		char* float_value;
 	}value;
 
 	union

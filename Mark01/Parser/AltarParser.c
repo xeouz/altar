@@ -29,7 +29,7 @@ ParserType* InitParser(LexerType* lexer)
 // -- Errors --
 void ParserEOFError()
 {
-    printf("[Parser] - End of File\n");
+    //printf("[Parser] - End of File\n");
 }
 
 void ParserStatementError(ParserType* parser)
@@ -88,7 +88,7 @@ void ParserPrintVar(ParserType* parser, ASTreeType* variableValue)
     }
     else if(variableValue->type==AST_FLOAT)
     {
-        printf("[Parser] - Value: %f\n",variableValue->value.float_value);
+        printf("[Parser] - Value: %s\n",variableValue->value.float_value);
     }
 }
 
@@ -106,6 +106,13 @@ NodeArrayType* ParserParseParenthesis(ParserType* parser)
     }
 
     ASTreeType* statement=ParserParseExpression(parser);
+    if(statement->type==AST_VARIABLE_DECLARATION)
+    {
+        printf("Cannot declare variable in parenthesis\n");
+        exit(1);
+        return NULL;
+    }
+
  
     AppendNodeArray(parenthesis,statement);
 
@@ -114,6 +121,13 @@ NodeArrayType* ParserParseParenthesis(ParserType* parser)
         ParserAdvanceToken(parser,TOKEN_COMMA);
 
         statement=ParserParseExpression(parser);
+        if(statement->type==AST_VARIABLE_DECLARATION)
+        {
+            printf("Cannot declare variable in parenthesis\n");
+            exit(1);
+            return NULL;
+        }
+
         AppendNodeArray(parenthesis,statement);
     }
 
@@ -148,7 +162,7 @@ ASTreeType* ParserParseStatement(ParserType* parser)
         case TOKEN_DIV: AST=ParserParseArithmetic(parser);break;
         case TOKEN_MOD: AST=ParserParseArithmetic(parser);break;
 
-        default: AST=InitASTree(AST_ENDL); break;
+        default: printf("Unknown Token Type: %s\n",parser->PreviousToken->value); break;
     }
 
     return AST;
@@ -170,11 +184,14 @@ ASTreeType* ParserParseStatements(ParserType* parser)
     AppendNodeArray(AST->RootValue, statement);
 
     // Parse more statements
-    while(parser->CurrentToken->type == TOKEN_SEMICOL || parser->CurrentToken->type!=TOKEN_ENDFL)
+    while(parser->CurrentToken->type == TOKEN_SEMICOL || parser->PreviousToken->type==TOKEN_RBRACE || parser->CurrentToken->type!=TOKEN_ENDFL)
     {
-        // Advance the token SemiColon
-        if(parser->CurrentToken->type == TOKEN_SEMICOL)
-            ParserAdvanceToken(parser, TOKEN_SEMICOL);
+        // Advance the token Semicolon
+        if(parser->CurrentToken->type==TOKEN_SEMICOL)
+            ParserAdvanceToken(parser,TOKEN_SEMICOL);
+
+        if(parser->CurrentToken->type==TOKEN_ENDFL)
+            break;
 
         // Parse a Statement
         ASTreeType* statement = ParserParseStatement(parser);
@@ -455,10 +472,7 @@ ASTreeType* ParserParseBlock(ParserType* parser)
     {
         ASTreeType* statement=ParserParseStatement(parser);
 
-        if(parser->CurrentToken->type==TOKEN_SEMICOL)
-        {
-            ParserAdvanceToken(parser,TOKEN_SEMICOL);
-        }
+        ParserAdvanceToken(parser,TOKEN_SEMICOL);
 
         AppendNodeArray(block->RootValue,statement);
     }
@@ -503,6 +517,14 @@ ASTreeType* ParserParseVariable(ParserType* parser)
         {  
             ParserAdvanceToken(parser,TOKEN_EQUALS);
             return ParserParseVariableDeclarationHelper(parser,variable);
+        }
+        else
+        {
+            variable->type=AST_VARIABLE;
+            variable->name.variable_name=variableName;
+            variable->val_type.variable_def_value_type=parser->PreviousToken->value;
+
+            return variable;
         }
     }
     else if(parser->CurrentToken->type==TOKEN_EQUALS)
@@ -573,7 +595,7 @@ ASTreeType* ParserParseFloat(ParserType* parser)
 {   
     // Create the float ASTree and set the value
     ASTreeType* AST=InitASTree(AST_FLOAT);
-    AST->value.float_value=atof(parser->CurrentToken->value);
+    AST->value.float_value=parser->CurrentToken->value;
 
     // Advance the float
     ParserAdvanceToken(parser,TOKEN_FLOAT);
@@ -937,12 +959,10 @@ ASTreeType* ParserParseFunction(ParserType* parser)
 // Parse a function call
 ASTreeType* ParserParseFunctionCall(ParserType* parser)
 {
-    //char* variableName=parser->PreviousToken->value;
-
-    //printf("[Parser] - Function Call: %s\n",variableName);
-
     // Create the function call ASTree
     ASTreeType* functionCall=InitASTree(AST_FUNCTION_CALL);
+
+    functionCall->name.function_call_name=parser->PreviousToken->value;
 
     functionCall->args.function_call_arguments=ParserParseParenthesis(parser);
 

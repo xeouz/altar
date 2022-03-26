@@ -38,7 +38,9 @@ int main()
     */
 
     VisitorType* visitor=InitVisitor();
-    VisitorTraverseRoot(visitor,root);  // This is the main function that will be called by the compiler
+    char* code=VisitorTraverseRoot(visitor,root,0);  // This is the main function that will be called by the compiler
+
+    printf("\n--- Code ---\n\n%s\n",code);
 
     return 0;
 }

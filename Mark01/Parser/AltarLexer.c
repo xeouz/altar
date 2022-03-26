@@ -131,8 +131,10 @@ char LexerPeek(LexerType* lexer, char peek)
 // Get the string of the current character
 char* LexerCursorStr(LexerType* lexer)
 {
-	// Return the string
-	return (char[]){lexer->cursor,'\0'};
+	char* c=calloc(2,sizeof(char));
+	c[0]=lexer->cursor;
+	c[1]='\0';
+	return c;
 }
 
 
@@ -365,7 +367,6 @@ TokenType* LexerGatherStrChar(LexerType* lexer)
 	{	
 		// Initializing the token
 		TokenType* token=InitToken(TOKEN_CHAR,LexerCursorStr(lexer));
-
 		// Advancing the Character
 		LexerAdvanceChar(lexer); 
 

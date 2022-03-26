@@ -36,12 +36,16 @@ void VisitorAddIncludes(VisitorType* visitor, char* include);
 char VisitorInIncludes(VisitorType* visitor, char* include);
 char VisitorVariableDeclared(VisitorType* visitor, NodeArrayType* scope, char* var);
 char* VisitorGetVariableType(VisitorType* visitor, NodeArrayType* scope, char* var);
+char VisitorFunctionDeclared(VisitorType* visitor, NodeArrayType* scope, char* func);
+ASTreeType* VisitorGetFunction(VisitorType* visitor, NodeArrayType* scope, char* func);
+char VisitorIsSTDFunction(char* func);
+char VisitorCheckFunctionArgType(VisitorType* visitor, ASTreeType* func, char* type, Int arg_index);
 
 ASTreeType* VisitorGetVariable(VisitorType* visitor, NodeArrayType* scope, char* var);
 
 ASTreeType* VisitorFindVariableDeclaration(VisitorType* visitor, char* var);
 
-char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root);
+char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, int indent);
 
 char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node);
 
@@ -51,5 +55,9 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node);
 char* VisitorTraverseMultiVariableDeclaration(VisitorType* visitor, ASTreeType* node);
 
 char* VisitorTraverseFunctionCall(VisitorType* visitor, ASTreeType* node);
+char* VisitorTraverseFunctionDeclaration(VisitorType* visitor, ASTreeType* node);
+char* VisitorTraverseParenthesis(VisitorType* visitor, ASTreeType* node, NodeArrayType* arr, char* sep);
+
+char* VisitorTraverseEchoCall(VisitorType* visitor, ASTreeType* node);
 
 #endif
