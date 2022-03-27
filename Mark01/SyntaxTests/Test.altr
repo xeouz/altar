@@ -1,11 +1,11 @@
-var mytext = "Hello World";
-
-func printtext(text:str)
+func helloworld() -> str
 {
-    echo(text);
+    return "Hello World!";
 }
 
 func main()
 {
-    printtext(mytext);
+    echo(helloworld());
+
+    return 0;
 }

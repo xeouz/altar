@@ -432,7 +432,7 @@ ASTreeType* ParserParseReturn(ParserType* parser)
 
     if(parser->CurrentToken->type==TOKEN_SEMICOL)
     {
-        ParserAdvanceToken(parser,TOKEN_SEMICOL);
+        return_statement->RootValue=InitNodeArray(sizeof(struct ASTreeStructure));
         return return_statement;
     }
     

@@ -18,6 +18,8 @@ typedef struct VisitorStructure
         char** includes;
         Int includes_length;
 
+        ASTreeType* current;
+
         struct 
         {
             char boost_any;
@@ -47,6 +49,7 @@ ASTreeType* VisitorFindVariableDeclaration(VisitorType* visitor, char* var);
 
 char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, int indent);
 
+char* VisitorTraverseIncludes(VisitorType* visitor);
 char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node);
 
 char* VisitorTraverseVariable(VisitorType* visitor, ASTreeType* node);
@@ -56,6 +59,7 @@ char* VisitorTraverseMultiVariableDeclaration(VisitorType* visitor, ASTreeType* 
 
 char* VisitorTraverseFunctionCall(VisitorType* visitor, ASTreeType* node);
 char* VisitorTraverseFunctionDeclaration(VisitorType* visitor, ASTreeType* node);
+char* VisitorTraverseReturn(VisitorType* visitor, ASTreeType* node);
 char* VisitorTraverseParenthesis(VisitorType* visitor, ASTreeType* node, NodeArrayType* arr, char* sep);
 
 char* VisitorTraverseEchoCall(VisitorType* visitor, ASTreeType* node);
