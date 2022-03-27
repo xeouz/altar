@@ -1,4 +1,4 @@
-srcfldr= ./Compiler
+srcfldr= ./Transpiler
 outfldr= ./Executable
 srcfile= main.c
 src= $(srcfldr)/$(srcfile)
