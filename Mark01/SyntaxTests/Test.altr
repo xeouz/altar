@@ -1,11 +1,4 @@
-func helloworld() -> str
-{
-    return "Hello World!";
-}
-
 func main()
 {
-    echo(helloworld());
-
-    return 0;
+    her`
 }

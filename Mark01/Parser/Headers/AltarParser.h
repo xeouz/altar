@@ -56,6 +56,7 @@ ASTreeType* ParserParseBool(ParserType* parser);
 ASTreeType* ParserParseArray(ParserType* parser);
 ASTreeType* ParserParseBlockAccess(ParserType* parser ,ASTreeType* variable);
 ASTreeType* ParserParsePreIncrDecr(ParserType* parser, char incrOrDecr);
+ASTreeType* ParserParseConditions(ParserType* parser);
 
 ASTreeType* ParserParseIf(ParserType* parser);
 ASTreeType* ParserParseFunction(ParserType* parser);
@@ -63,6 +64,7 @@ ASTreeType* ParserParseFunctionCall(ParserType* parser);
 ASTreeType* ParserParseClass(ParserType* parser);
 
 ASTreeType* ParserParseArithmetic(ParserType* parser);
+ASTreeType* ParserParseArithParenthesis(ParserType* parser);
 
 // Destruction
 void DestroyParser(ParserType* Parser);

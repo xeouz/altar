@@ -128,6 +128,8 @@ char* TokenToSym(TokenType* token)
 		case TOKEN_BSLSH: return "\\";
 		case TOKEN_RANGB: return ">";
 		case TOKEN_LANGB: return "<";
+		case TOKEN_RANGLE: return ">=";
+		case TOKEN_LANGLE: return "<=";
 
 		case TOKEN_LBSHIFT: return "<<";
 		case TOKEN_RBSHIFT: return ">>";
@@ -158,13 +160,72 @@ char* TokenToSym(TokenType* token)
 
 char* TokenTypeToStr(USInt type)
 {
-	TokenType* token=InitToken(type,"a");
+	switch(type)
+	{	
+		case TOKEN_ID: return "ID";
 
-	char* str=TokenToStr(token);
+		case TOKEN_EQUALS: return "EQUALS";
+		case TOKEN_CHKEQUALS: return "CHKEQUALS";
 
-	DestroyToken(token);
+		case TOKEN_LPAREN: return "LPAREN";
+		case TOKEN_LBRACK: return "LBRACK";
+		case TOKEN_LBRACE: return "LBRACE";
+		case TOKEN_RPAREN: return "RPAREN";
+		case TOKEN_RBRACK: return "RBRACK";
+		case TOKEN_RBRACE: return "RBRACE";
 
-	return str;
+		case TOKEN_STR: return "STR";
+		case TOKEN_CHAR: return "CHAR";
+		case TOKEN_INTEGER: return "INTEGER";
+		case TOKEN_FLOAT: return "FLOAT";
+
+		case TOKEN_COLON: return "COLON";
+		case TOKEN_SEMICOL: return "SEMICOL";
+
+		case TOKEN_ADD: return "ADD";
+		case TOKEN_SUB: return "SUB";
+		case TOKEN_MUL: return "MUL";
+		case TOKEN_DIV: return "DIV";
+		case TOKEN_MOD: return "MOD";
+		case TOKEN_FLR: return "FLR";
+
+		case TOKEN_ADDEQ: return "ADDEQ";
+		case TOKEN_SUBEQ: return "SUBEQ";
+		case TOKEN_MULEQ: return "MULEQ";
+		case TOKEN_DIVEQ: return "DIVEQ";
+		case TOKEN_MODEQ: return "MODEQ";
+		case TOKEN_FLREQ: return "FLREQ";
+
+		case TOKEN_INCR: return "INCR";
+		case TOKEN_DECR: return "DECR";
+		case TOKEN_EXP: return "EXP";
+
+		case TOKEN_BSLSH: return "BSLSH";
+		
+		case TOKEN_RANGB: return "RANGB";
+		case TOKEN_LANGB: return "LANGB";
+
+		case TOKEN_LBSHIFT: return "LBSHIFT";
+		case TOKEN_RBSHIFT: return "RBSHIFT";
+
+		case TOKEN_ANDOP: return "ANDOP";
+		case TOKEN_NOTOP: return "NOTOP";
+		case TOKEN_OROP: return "OROP";
+
+		case TOKEN_CONDIT: return "CONDIT";
+
+		case TOKEN_ENDFL: return "ENDFL";
+
+		case TOKEN_CARET: return "CARET";
+		case TOKEN_HASHT: return "HASHT";
+		case TOKEN_ATSYM: return "ATSYM";
+		case TOKEN_DOT: return "DOT";
+		case TOKEN_COMMNT: return "CMMNT";
+		case TOKEN_LSCMMNT: return "LSCMMNT";
+		case TOKEN_LECMMNT: return "LECMMNT";
+
+		default: return "UNKNOWN";
+	}
 }
 // -- Destruction --
 void DestroyToken(TokenType* token)

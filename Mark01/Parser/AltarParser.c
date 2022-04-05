@@ -42,11 +42,10 @@ void ParserUnexpectedTokenError(ParserType* parser)
     printf("[Parser] ParserUnexpectedTokenError - Unexpected Token: `%s` - %s\n\n",parser->CurrentToken->value,TokenToStr(parser->CurrentToken)); 
 }
 
-void PareserDifferentTokenError(ParserType* parser, USInt type)
+void ParserDifferentTokenError(ParserType* parser, USInt type)
 {
     printf("[Parser] ParserDifferentTokenError - Token: `%s` - %s, Expected Token: `%s` - %d\n\n",parser->CurrentToken->value,TokenToStr(parser->CurrentToken),TokenTypeToStr(type),type);
 }
-
 
 void ParserExpressionError(ParserType* parser)
 {
@@ -68,7 +67,8 @@ void ParserAdvanceToken(ParserType* parser, USInt type)
     }
     else
     {
-        PareserDifferentTokenError(parser, type);
+        ParserDifferentTokenError(parser, type);
+        exit(1);
     }
 }
 
@@ -165,6 +165,8 @@ ASTreeType* ParserParseStatement(ParserType* parser)
         default: printf("Unknown Token Type: %s\n",parser->PreviousToken->value); break;
     }
 
+    parser->PreviousAST = AST;
+
     return AST;
 }
 
@@ -198,6 +200,7 @@ ASTreeType* ParserParseStatements(ParserType* parser)
 
         // Add the statement to the node array
         AppendNodeArray(AST->RootValue, statement);
+
     }
 
     // Return the ASTree
@@ -366,19 +369,17 @@ ASTreeType* ParserParseVariableDeclaration(ParserType* parser)
 
 ASTreeType* ParserParseVariableDeclarationHelper(ParserType* parser, ASTreeType* variable)
 {
-    // printf("[Parser] - Variable Declaration w/ Value: %s\n",variable->name.variable_def_name);
     // Parse the variable value
     ASTreeType* variableValue=ParserParseExpression(parser);
 
     // Set the variable name and value
     variable->tree_child=variableValue;
-
-    // Printing Variable and Value
-    // ParserPrintVar(parser,variableValue);
+    //printf("[Parser] - Variable Declaration w/ Value: %s\n",ASTreeTypeToString(variableValue->type));
 
     // Return the variable definition ASTree
     return variable;
 }
+
 // Parse an Expression
 ASTreeType* ParserParseExpression(ParserType* parser)
 {   
@@ -403,12 +404,135 @@ ASTreeType* ParserParseExpression(ParserType* parser)
         case TOKEN_MUL: AST=ParserParseArithmetic(parser);break;
         case TOKEN_DIV: AST=ParserParseArithmetic(parser);break;
         case TOKEN_MOD: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_LPAREN: AST=ParserParseArithParenthesis(parser);break;
+
+        case TOKEN_CHKEQUALS: AST=ParserParseConditions(parser);break;
+        case TOKEN_NOTEQUALS: AST=ParserParseConditions(parser);break;
+        case TOKEN_LANGLE: AST=ParserParseConditions(parser);break;
+        case TOKEN_RANGLE: AST=ParserParseConditions(parser);break;
+        case TOKEN_LANGB: AST=ParserParseConditions(parser);break;
+        case TOKEN_RANGB: AST=ParserParseConditions(parser);break;
 
         // Raise an error if the current token is not an expression
         default: ParserExpressionError(parser); exit(1);
     }
 
     parser->PreviousAST=AST;
+
+    ASTreeType* AST2;
+
+    switch(parser->CurrentToken->type)
+    {
+        case TOKEN_ADD: AST2=ParserParseArithmetic(parser);break;
+        case TOKEN_SUB: AST2=ParserParseArithmetic(parser);break;
+        case TOKEN_MUL: AST2=ParserParseArithmetic(parser);break;
+        case TOKEN_DIV: AST2=ParserParseArithmetic(parser);break;
+        case TOKEN_MOD: AST2=ParserParseArithmetic(parser);break;
+
+        case TOKEN_CHKEQUALS: AST2=ParserParseConditions(parser);break;
+        case TOKEN_NOTEQUALS: AST2=ParserParseConditions(parser);break;
+        case TOKEN_LANGLE: AST2=ParserParseConditions(parser);break;
+        case TOKEN_RANGLE: AST2=ParserParseConditions(parser);break;
+        case TOKEN_LANGB: AST2=ParserParseConditions(parser);break;
+        case TOKEN_RANGB: AST2=ParserParseConditions(parser);break;
+
+        default: return AST;
+    }
+
+    return AST2;
+}
+
+ASTreeType* ParserParseArithExpression(ParserType* parser)
+{
+    ASTreeType* AST;
+
+    // Switch on the current token type
+    switch(parser->CurrentToken->type)
+    {
+        case TOKEN_ID: AST=ParserParseIdentifier(parser);break;
+        case TOKEN_STR: AST=ParserParseString(parser);break;
+        case TOKEN_INTEGER: AST=ParserParseInteger(parser);break;
+        case TOKEN_FLOAT: AST=ParserParseFloat(parser);break;
+        case TOKEN_CHAR: AST=ParserParseCharacter(parser);break;
+        case TOKEN_BOOL: AST=ParserParseBool(parser);break;
+        case TOKEN_LBRACK: AST=ParserParseArray(parser);break;
+
+        case TOKEN_INCR: AST=ParserParsePreIncrDecr(parser, 0);break;
+        case TOKEN_DECR: AST=ParserParsePreIncrDecr(parser, 1);break;
+
+        case TOKEN_ADD: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_SUB: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_MUL: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_DIV: AST=ParserParseArithmetic(parser);break;
+        case TOKEN_MOD: AST=ParserParseArithmetic(parser);break;
+
+        case TOKEN_CHKEQUALS: AST=ParserParseConditions(parser);break;
+        case TOKEN_NOTEQUALS: AST=ParserParseConditions(parser);break;
+        case TOKEN_LANGLE: AST=ParserParseConditions(parser);break;
+        case TOKEN_RANGLE: AST=ParserParseConditions(parser);break;
+        case TOKEN_LANGB: AST=ParserParseConditions(parser);break;
+        case TOKEN_RANGB: AST=ParserParseConditions(parser);break;
+
+        // Raise an error if the current token is not an expression
+        default: ParserExpressionError(parser); exit(1);
+    }
+
+    parser->PreviousAST=AST;
+    ASTreeType* AST2;
+
+    switch(parser->CurrentToken->type)
+    {
+        case TOKEN_CHKEQUALS: AST2=ParserParseConditions(parser);break;
+        case TOKEN_NOTEQUALS: AST2=ParserParseConditions(parser);break;
+        case TOKEN_LANGLE: AST2=ParserParseConditions(parser);break;
+        case TOKEN_RANGLE: AST2=ParserParseConditions(parser);break;
+        case TOKEN_LANGB: AST2=ParserParseConditions(parser);break;
+        case TOKEN_RANGB: AST2=ParserParseConditions(parser);break;
+
+        default: return AST;
+    }
+
+    parser->PreviousAST=AST2;
+
+    return AST2;
+}
+
+ASTreeType* ParserParseConditions(ParserType* parser)
+{
+    ASTreeType* prev=parser->PreviousAST;
+    ASTreeType* AST;
+
+    switch(parser->CurrentToken->type)
+    {
+        case TOKEN_CHKEQUALS: AST=InitASTree(AST_CHKEQ);break;
+        case TOKEN_NOTEQUALS: AST=InitASTree(AST_CHKNEQ);break;
+        case TOKEN_LANGLE: AST=InitASTree(AST_CHKLESSEQ);break;
+        case TOKEN_RANGLE: AST=InitASTree(AST_CHKGREATEREQ);break;
+        case TOKEN_LANGB: AST=InitASTree(AST_CHKLESS);break;
+        case TOKEN_RANGB: AST=InitASTree(AST_CHKGREATER);break;
+
+        // Raise an error if the current token is not an expression
+        default: printf("Invalid operation: %s\n",TokenToStr(parser->CurrentToken)); exit(1);
+    }
+
+    AST->RootValue=InitNodeArray(sizeof(struct ASTreeStructure));
+    AppendNodeArray(AST->RootValue,prev);
+    ParserAdvanceToken(parser,parser->CurrentToken->type);
+    AppendNodeArray(AST->RootValue,ParserParseExpression(parser));
+    
+    switch(parser->CurrentToken->type)
+    {
+        case TOKEN_CHKEQUALS: AppendNodeArray(AST->RootValue,ParserParseExpression(parser)); break;
+        case TOKEN_NOTEQUALS: AppendNodeArray(AST->RootValue,ParserParseExpression(parser)); break;
+        case TOKEN_LANGLE: AppendNodeArray(AST->RootValue,ParserParseExpression(parser)); break;
+        case TOKEN_RANGLE: AppendNodeArray(AST->RootValue,ParserParseExpression(parser)); break;
+        case TOKEN_LANGB: AppendNodeArray(AST->RootValue,ParserParseExpression(parser)); break;
+        case TOKEN_RANGB: AppendNodeArray(AST->RootValue,ParserParseExpression(parser)); break;
+
+        // Raise an error if the current token is not an expression
+        default: return AST;
+    }
+
     return AST;
 }
 
@@ -472,19 +596,13 @@ ASTreeType* ParserParseBlock(ParserType* parser)
     {
         ASTreeType* statement=ParserParseStatement(parser);
 
-        ParserAdvanceToken(parser,TOKEN_SEMICOL);
-
+        if(parser->PreviousToken->type!=TOKEN_RBRACE)
+            ParserAdvanceToken(parser,TOKEN_SEMICOL);
         AppendNodeArray(block->RootValue,statement);
     }
 
     ParserAdvanceToken(parser,TOKEN_RBRACE);
-
-    if(parser->CurrentToken->value==NULL)
-    {
-        parser->CurrentToken->value=calloc(1,1);
-        parser->CurrentToken->value[0]=0;
-    }
-
+    
     return block;
 }
 
@@ -575,7 +693,6 @@ ASTreeType* ParserParseVariable(ParserType* parser)
     // Return the variable ASTree
     return variable;
 }
-
 
 // Parse an integer
 ASTreeType* ParserParseInteger(ParserType* parser)
@@ -697,6 +814,8 @@ ASTreeType* ParserParseIf(ParserType* parser)
 
     ParserAdvanceToken(parser,TOKEN_LPAREN); // "("
     AST->ifexpr=ParserParseExpression(parser);
+    if(parser->CurrentToken->type!=TOKEN_RPAREN)
+        AST->ifexpr=ParserParseExpression(parser);
     ParserAdvanceToken(parser,TOKEN_RPAREN); // ")"
 
     if(parser->CurrentToken->type!=TOKEN_LBRACE)
@@ -806,7 +925,6 @@ ASTreeType* ParserParseClass(ParserType* parser)
 
 ASTreeType* ParserParseArithmetic(ParserType* parser)
 {
-
     // Arithmetic, uses BODMAS rules
 
     // Initiate arithmetic sequence and add the previous variable/literal
@@ -831,23 +949,19 @@ ASTreeType* ParserParseArithmetic(ParserType* parser)
 
             default: printf("Error: Unknown arithmetic operator - %s\n",parser->CurrentToken->value); break;
         }
-
         ParserAdvanceToken(parser,parser->CurrentToken->type);
 
         // if the current token is an opening parenthesis, then parse the closure and add the parenthesis to the sequence
         if(parser->CurrentToken->type==TOKEN_LPAREN)
         {
-            NodeArrayType* closure=ParserParseClosure(parser);
+            ASTreeType* paren=ParserParseArithParenthesis(parser);
 
-            for(Int i=1;i<closure->size;i++)
-            {
-                AppendNodeArray(Sequence,closure->trees[i]);
-            }
+            AppendNodeArray(Sequence,paren);
         }
 
         // else, add it directly to the sequence
         else
-            AppendNodeArray(Sequence,ParserParseExpression(parser));
+            AppendNodeArray(Sequence,ParserParseArithExpression(parser));
     }
 
     // convert the sequence to postfix notation
@@ -861,8 +975,8 @@ ASTreeType* ParserParseArithmetic(ParserType* parser)
     {
         printf("Postfix: %s\n",ASTreeTypeToString(postfix->trees[i]->type));
     }
+    printf("\n");
     */
-
     //DestroyASTreeArray(Sequence);
     
 
@@ -889,48 +1003,21 @@ ASTreeType* ParserParseArithmetic(ParserType* parser)
         }
     }
 
-    ASTreeType* AST=PopNodeArray(stack);
+    ASTreeType* AST=PopNodeArray(postfix);
 
     return AST;
 }
 
-NodeArrayType* ParserParseClosure(ParserType* parser)
+ASTreeType* ParserParseArithParenthesis(ParserType* parser)
 {
     ParserAdvanceToken(parser,TOKEN_LPAREN); // "("
-
-    NodeArrayType* line=InitNodeArray(sizeof(struct ASTreeStructure));
-
-    ASTreeType* leftParen=InitASTree(AST_PLACEHOLDER);
-    leftParen->value.char_value='(';
-    AppendNodeArray(line,leftParen);
-
-    while(parser->CurrentToken->type!=TOKEN_RPAREN)
-    {
-        if(parser->CurrentToken->type!=TOKEN_LPAREN)
-            AppendNodeArray(line,ParserParseExpression(parser));
-        else
-        {
-            NodeArrayType* closure=ParserParseClosure(parser);
-
-            for(Int i=1;i<closure->size;i++)
-            {
-                AppendNodeArray(line,closure->trees[i]);
-            }
-
-        }
-
-        if(parser->CurrentToken->type==TOKEN_COMMA)
-        {
-            ParserAdvanceToken(parser,TOKEN_COMMA);
-        }
-    }
+    ASTreeType* AST=InitASTree(AST_ARITHPARENTHESIS);
+    
+    ParserParseArithExpression(parser);
+    AST->tree_child=ParserParseArithmetic(parser);
     ParserAdvanceToken(parser,TOKEN_RPAREN); // ")"
 
-    ASTreeType* rightParen=InitASTree(AST_PLACEHOLDER);
-    rightParen->value.char_value=')';
-    AppendNodeArray(line,rightParen);
-
-    return line;
+    return AST;
 }
 
 ASTreeType* ParserParseFunction(ParserType* parser)
@@ -954,7 +1041,6 @@ ASTreeType* ParserParseFunction(ParserType* parser)
 
     return AST;
 }
-
 
 // Parse a function call
 ASTreeType* ParserParseFunctionCall(ParserType* parser)

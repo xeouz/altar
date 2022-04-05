@@ -12,22 +12,27 @@
 #include "Headers/AltarLexer.h"
 #include "Headers/AltarTokens.h"
 
+#include "../Errors/Errors.h"
+
 // Include the Tokens
 #include "AltarTokens.c"
 
 // --- Init ---
 
 // Inititalize the Lexer
-LexerType* InitLexer(char *src)
+LexerType* InitLexer(char *src, char* filename)
 {
 	// Allocate Memory for the Lexer
 	LexerType* lexer=calloc(1,sizeof(struct LexerStructure));
 
 	// Set the source
 	lexer->src=src;
+	lexer->filename=filename;
 
 	// Set the current position
 	lexer->indx=0;
+
+	lexer->line=0;
 
 	// Set the current Character
 	lexer->cursor=lexer->src[lexer->indx];
@@ -47,6 +52,9 @@ void LexerAdvanceChar(LexerType* lexer)
 	// If the current index is less than the size and the current character is not a null character
 	if(lexer->cursor!='\0' && (lexer->indx)<(lexer->size))
 	{
+		if(lexer->cursor=='\n')
+			++lexer->line;
+
 		// Increment the index
 		++lexer->indx;
 
@@ -112,8 +120,43 @@ void LexerSkipComments(LexerType* lexer)
 void LexerRaiseError(LexerType* lexer)
 {
 	// Print the error
-	printf("[Lexer]: Invalid Character %c, Character ASCII - %d\n",lexer->cursor,lexer->cursor);
+	char* error=LexErrors[0];
+	const char split[2]={'\n','\0'};
+	char* lines[3];
 
+	char* token=strtok(lexer->src,split);
+	for(Int i=0;i<=lexer->line+1;++i)
+	{
+		if(i==lexer->line-1)
+		{
+			lines[0]=token;
+		}
+		else if(i==lexer->line)
+		{
+			lines[1]=token;
+		}
+		else if(i==lexer->line+1)
+		{
+			lines[2]=token;
+		}
+		token=strtok(NULL,split);
+	}
+
+	if(lines[2]!=NULL)
+	{
+		printf(error,KRED,KRED,lexer->filename,lexer->line+1,KNRM,lexer->line,lines[0],KWHT,lexer->line+1,lines[1],KNRM,lexer->line+2,lines[2],KRED,
+				lexer->cursor);
+	}
+	else if(lines[1]!=NULL)
+	{
+		printf(error,lexer->filename,lexer->line+1,lexer->line,lines[0],lexer->line+1,lines[1],lexer->line+2,"",
+				lexer->cursor);
+	}
+	else if(lines[1]==NULL)
+	{
+		printf(error,lexer->filename,lexer->line+1,lexer->line,lines[0],lexer->line+1,"",lexer->line+2,"",
+				lexer->cursor);
+	}
 	// Exit the program
 	exit(1);
 }
@@ -293,6 +336,11 @@ TokenType* LexerAdvanceToken(LexerType* lexer)
 					LexerAdvanceChar(lexer);
 					return LexerAdvanceWithToken(lexer,InitToken(TOKEN_LBSHIFT,"<<"));
 				}
+				else if(peek=='=')
+				{
+					LexerAdvanceChar(lexer);
+					return LexerAdvanceWithToken(lexer,InitToken(TOKEN_LANGLE,"<="));
+				}
 				return LexerAdvanceInplace(lexer,TOKEN_LANGB);
 			}
 
@@ -302,6 +350,11 @@ TokenType* LexerAdvanceToken(LexerType* lexer)
 				{
 					LexerAdvanceChar(lexer);
 					return LexerAdvanceWithToken(lexer,InitToken(TOKEN_RBSHIFT,">>"));
+				}
+				else if(peek=='=')
+				{
+					LexerAdvanceChar(lexer);
+					return LexerAdvanceWithToken(lexer,InitToken(TOKEN_RANGLE,">="));
 				}
 				return LexerAdvanceInplace(lexer,TOKEN_RANGB);
 			}
@@ -316,7 +369,15 @@ TokenType* LexerAdvanceToken(LexerType* lexer)
 				return LexerAdvanceInplace(lexer,TOKEN_EQUALS);
 			}
 
-			case '!': return LexerAdvanceInplace(lexer,TOKEN_NOTOP);
+			case '!': 
+			{
+				if(peek=='=')
+				{
+					LexerAdvanceChar(lexer);
+					return LexerAdvanceWithToken(lexer,InitToken(TOKEN_NOTEQUALS,"!="));
+				}
+				return LexerAdvanceInplace(lexer,TOKEN_NOTOP);
+			}
 
 			case '(': return LexerAdvanceInplace(lexer,TOKEN_LPAREN);
 			case '[': return LexerAdvanceInplace(lexer,TOKEN_LBRACK);
@@ -465,29 +526,8 @@ TokenType* LexerGatherIdentifier(LexerType* lexer)
 	}
 
 
-	// If the value is "and" 
-	if(strcmp(value,"and")==0)
-	{
-		// Return an "and" operator token
-		return InitToken(TOKEN_ANDOP,"&&");
-	}
-
-	// If the value is "or"
-	else if(strcmp(value,"or")==0)
-	{
-		// Return an "or" operator token
-		return InitToken(TOKEN_OROP,"||");
-	}
-	
-	// If the value is "not"
-	else if(strcmp(value,"not")==0)
-	{
-		// Return an "not" operator token
-		return InitToken(TOKEN_NOTOP,"!");
-	}
-
 	// If the value is "true"
-	else if(strcmp(value,"true")==0)
+	if(strcmp(value,"true")==0)
 	{
 		// Return a 1 Integer token
 		return InitToken(TOKEN_BOOL,"1");

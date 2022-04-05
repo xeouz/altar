@@ -7,6 +7,7 @@
 #include <math.h>
 
 #include "Headers/AltarVisitor.h"
+#include "../Parser/IncludeLinker.h"
 
 VisitorType* InitVisitor()
 {
@@ -21,6 +22,7 @@ VisitorType* InitVisitor()
     visitor->memory.includes_length=0;
     visitor->memory.std_includes.boost_any=0;
     visitor->memory.std_includes.iostream=0;
+    visitor->memory.indent=0;
     return visitor;
 }
 
@@ -218,14 +220,109 @@ char VisitorCheckFunctionArgType(VisitorType* visitor, ASTreeType* func, char* t
         return 0;
 }
 
+NodeArrayType* VisitorGetScope(VisitorType* visitor)
+{
+    NodeArrayType* scope;
+
+    switch(visitor->scope.current_scope)
+    {
+        case 'c':
+            scope=visitor->scope.class_local;
+            break;
+        
+        case 'f':
+            scope=visitor->scope.func_local;
+            break;
+
+        default: 
+            scope=visitor->scope.global;
+            break;
+    }
+
+    return scope;
+}
+
+char* VisitorGetType(VisitorType* visitor, ASTreeType* node)
+{
+    switch(node->type)
+    {
+        case AST_INTEGER: return "int";
+        case AST_FLOAT: return "float";
+        case AST_STRING: return "std::string";
+        case AST_BOOL: return "bool";
+        case AST_CHARACTER: return "char";
+
+        case AST_ADD: return VisitorGetType(visitor,node->arithleft);
+        case AST_SUB: return VisitorGetType(visitor,node->arithleft);
+        case AST_MUL: return VisitorGetType(visitor,node->arithleft);
+        case AST_DIV: return VisitorGetType(visitor,node->arithleft);
+        case AST_MOD: return VisitorGetType(visitor,node->arithleft);
+        case AST_ARITHPARENTHESIS: return VisitorGetType(visitor,node->tree_child->arithleft);
+
+        case AST_FUNCTION_CALL: {
+            NodeArrayType* scope=VisitorGetScope(visitor);
+
+            ASTreeType* func = VisitorGetFunction(visitor,scope,node->name.function_call_name);
+            if(func==NULL)
+            {
+                return "";
+            }
+            else
+            {
+                return func->val_type.function_def_return_type;
+            }
+        }
+
+        case AST_VARIABLE: {
+            NodeArrayType* scope;
+            switch(visitor->scope.current_scope)
+            {
+                case 'c': scope = visitor->scope.class_local; break;
+                case 'f': scope = visitor->scope.func_local; break;
+                default: scope = visitor->scope.global; break;
+            }
+
+            return VisitorGetVariableType(visitor,scope,node->name.variable_name);
+        }
+    
+        default:return "";
+    }
+}
+
+char* VisitorGetConditionOperator(USInt op)
+{
+    switch(op)
+    {
+        case TOKEN_CHKEQUALS: return "==";
+        case TOKEN_NOTEQUALS: return "!=";
+        case TOKEN_LANGLE: return "<=";
+        case TOKEN_RANGLE: return ">=";
+        case TOKEN_LANGB: return "<";
+        case TOKEN_RANGB: return ">";
+        case TOKEN_ANDOP: return "&&";
+        case TOKEN_OROP: return "||";
+
+        default: return "";
+    }
+}
+
+char* VisitorPurifyType(char* type)
+{
+    if(strcmp(type,"std::string")==0)
+        return "str";
+    else if(strcmp(type,"boost::any")==0)
+        return "any";
+    else 
+        return type;
+}
+
 // ---
 
-char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, int indent)
+char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, char isHead)
 {   
     // Traversing every node
     char* code=calloc(1,1);
     char* line;
-    int j;
     for(Int i=1;i<root->RootValue->size+1;++i)
     {
         if(i>root->RootValue->size)
@@ -235,29 +332,31 @@ char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, int indent)
             break;
 
         line=VisitorTraverseNode(visitor,root->RootValue->trees[i]);
-        code=realloc(code,(strlen(code)+strlen(line)+2+(indent*3)));
+        code=realloc(code,strlen(code)+strlen(line)+(isHead?0:2)+2);
 
-        for(j=0;j<indent;++j)
-        {
-            strcat(code,"   ");
-        }
+        if(!isHead)
+            strcat(code,"\t");
 
         strcat(code,line);
 
-        if(root->RootValue->trees[i]->type!=AST_FUNCTION_DECLARATION && root->RootValue->trees[i]->type!=AST_CLASS_DECLARATION)
+        if(root->RootValue->trees[i]->type!=AST_FUNCTION_DECLARATION 
+        && root->RootValue->trees[i]->type!=AST_CLASS_DECLARATION
+        && root->RootValue->trees[i]->type!=AST_IF)
         {
             code=realloc(code,(strlen(code)+2));
             strcat(code,";");
         }
-        strcat(code,"\n");
+        {
+            code=realloc(code,(strlen(code)+2));
+            strcat(code,"\n");
+        }
         
         free(line);
     }
 
-    char* includes=VisitorTraverseIncludes(visitor);
-
-    if(indent==0)
+    if(isHead)
     {
+        char* includes=VisitorTraverseIncludes(visitor);
         char* code_with_includes=calloc(1,(strlen(code)+strlen(includes)+2));
         sprintf(code_with_includes,"%s\n%s",includes,code);
         free(includes);
@@ -285,7 +384,10 @@ char* VisitorTraverseIncludes(VisitorType* visitor)
     {
         code=realloc(code,(strlen(code)+strlen("#include <string>\n")+2));
         strcat(code,"#include <string>\n");
-    }
+    }  
+
+    code=realloc(code,strlen(code)+39);
+    strcat(code,"using namespace std::string_literals;\n");
 
     return code;
 }
@@ -302,6 +404,22 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
         case AST_FUNCTION_CALL: return VisitorTraverseFunctionCall(visitor,node);
         case AST_FUNCTION_DECLARATION: return VisitorTraverseFunctionDeclaration(visitor,node);
         case AST_RETURN: return VisitorTraverseReturn(visitor, node);
+
+        case AST_IF: return VisitorTraverseIf(visitor,node);
+
+        case AST_ADD: return VisitorTraverseArithmetic(visitor,node);
+        case AST_SUB: return VisitorTraverseArithmetic(visitor,node);
+        case AST_MUL: return VisitorTraverseArithmetic(visitor,node);
+        case AST_DIV: return VisitorTraverseArithmetic(visitor,node);
+        case AST_MOD: return VisitorTraverseArithmetic(visitor,node);
+
+        case AST_ARITHPARENTHESIS: {
+            char* code=calloc(1,1);
+            strcat(code,"(");
+            strcat(code,VisitorTraverseNode(visitor,node->tree_child));
+            strcat(code,")");
+            return code;
+        }
 
         case AST_INTEGER: {
             char* code=calloc(node->value.integer_value==0?1:log10((double)node->value.integer_value)+2,1);
@@ -322,10 +440,17 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
         }
 
         case AST_STRING: {
-            char* code=calloc(strlen(node->value.string_value)+3,1);
-            sprintf(code,"\"%s\"",node->value.string_value);
+            char* code=calloc(strlen(node->value.string_value)+4,1);
+            sprintf(code,"\"%s\"s",node->value.string_value);
             return code;
         }
+
+        case AST_CHKEQ: return VisitorTraverseConditions(visitor,node);
+        case AST_CHKNEQ: return VisitorTraverseConditions(visitor,node);
+        case AST_CHKGREATER: return VisitorTraverseConditions(visitor,node);
+        case AST_CHKLESS: return VisitorTraverseConditions(visitor,node);
+        case AST_CHKGREATEREQ: return VisitorTraverseConditions(visitor,node);
+        case AST_CHKLESSEQ: return VisitorTraverseConditions(visitor,node);
 
         default: printf("Unknown Node Type: %s\n",ASTreeTypeToString(node->type)); exit(1); return NULL;
     }
@@ -379,7 +504,7 @@ char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
 
     if(node->tree_child!=NULL)
         explicit_value=1;
-
+        
     // - Variable name
     variable_name=node->name.variable_def_name;
 
@@ -393,31 +518,15 @@ char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
         }
         else
         {
-            switch(node->tree_child->type)
-            {
-                case AST_INTEGER: variable_type="int"; free_variable_value=1; break;
-                case AST_FLOAT: variable_type="float"; free_variable_value=1; break;
-                case AST_CHARACTER: variable_type="char"; break;
-                case AST_BOOL: variable_type="bool"; break;
-                case AST_STRING: {
-                    variable_type="std::string";
-                    visitor->memory.std_includes.string=1;
-                    break;
-                }
-
-                case AST_VARIABLE: {
-                    variable_type=VisitorGetVariableType(visitor,scope,node->tree_child->name.variable_name);
-                    break;
-                }
-
-                default: printf("Unknown Variable Type: %d\n",node->tree_child->type); exit(1); return NULL;
-            }
+            variable_type=VisitorGetType(visitor, node->tree_child);
         }
     }
     else
     {
         if(strcmp(node->val_type.variable_def_value_type,"any")==0)
         {
+            printf("Cannot use type `any` as a variable type for now\n");
+            exit(1);
             variable_type="boost::any";
             visitor->memory.std_includes.boost_any=1;
         }
@@ -438,6 +547,11 @@ char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
     // - Variable value
     if(explicit_value)
     {
+        if(strcmp(VisitorPurifyType(variable_type),VisitorPurifyType(VisitorGetType(visitor,node->tree_child)))!=0)
+        {
+            printf("Variable `%s` declared with type `%s` but assigned with type `%s`\n",variable_name,VisitorPurifyType(variable_type),VisitorPurifyType(VisitorGetType(visitor,node->tree_child)));
+            exit(1);
+        }
         variable_value=VisitorTraverseNode(visitor,node->tree_child);
     }
 
@@ -451,6 +565,7 @@ char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
      * and assign it to the variable
     */
     //sprintf(variable,"%s %s = %s",variable_type,variable_name,variable_value);
+
     variable=calloc(strlen(variable_type)+strlen(variable_name)+strlen(variable_value)+6,1);
     if(explicit_value)
     {
@@ -503,51 +618,13 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
     char diff_type=0;
 
     // Checking definition type
-    if(strcmp(variable->val_type.variable_def_value_type,"boost::any")!=0)
+    if(strcmp(VisitorPurifyType(variable->val_type.variable_def_value_type),VisitorPurifyType(VisitorGetType(visitor,node->tree_child)))==0)
     {
-        switch(node->tree_child->type)
-        {
-            case AST_INTEGER: {
-                if(strcmp(variable->val_type.variable_def_value_type,"int")!=0)
-                    diff_type=1;
-                break;
-            }
-
-            case AST_CHARACTER: {
-                if(strcmp(variable->val_type.variable_def_value_type,"char")!=0)
-                    diff_type=1;
-                break;
-            }
-
-            case AST_FLOAT: {
-                if(strcmp(variable->val_type.variable_def_value_type,"float")!=0)
-                    diff_type=1;
-                break;
-            }
-
-            case AST_BOOL: {
-                if(strcmp(variable->val_type.variable_def_value_type,"bool")!=0)
-                    diff_type=1;
-                break;
-            }
-
-            case AST_STRING: {
-                if(strcmp(variable->val_type.variable_def_value_type,"std::string")!=0)
-                    diff_type=1;
-                break;
-            }
-
-            case AST_VARIABLE: {
-                char* type=VisitorGetVariableType(visitor,scope,node->name.variable_name);
-                if(strcmp(VisitorGetVariableType(visitor,scope,node->tree_child->name.variable_name),type)!=0)
-                {
-                    diff_type=1;
-                }
-                break;
-            }
-
-            default: printf("Unknown Variable Type: %s\n",ASTreeTypeToString(node->tree_child->type)); exit(1); return NULL;
-        }
+        diff_type=0;
+    }
+    else
+    {
+        diff_type=1;
     }
 
     char* variable_value;
@@ -564,8 +641,6 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
     char* variable_str=calloc(strlen(variable_name)+strlen(variable_value)+5,1);
 
     sprintf(variable_str,"%s = %s",variable_name,variable_value);
-
-    printf("%s\n",variable_str);
 
     return variable_str;
 }
@@ -600,18 +675,18 @@ char* VisitorTraverseFunctionCall(VisitorType* visitor, ASTreeType* node)
     {
         if(strcmp(name,"echo")==0)
             return VisitorTraverseEchoCall(visitor,node);
+        
     }
     else
     {
         // if it is not a default function
         // check if it is a user defined function
-        if(!VisitorFunctionDeclared(visitor, visitor->scope.global,name))
+        if(!VisitorFunctionDeclared(visitor, visitor->scope.global,name) && !VisitorFunctionDeclared(visitor, VisitorGetScope(visitor),name))
         {
             printf("Function %s not declared\n",name);
             exit(1);
             return NULL;
         }
-
         char* args=VisitorTraverseParenthesis(visitor,node,node->args.function_call_arguments,",");
         char* code=calloc(strlen(args)+strlen(name)+4,1);
         sprintf(code,"%s(%s)",name,args);
@@ -626,47 +701,8 @@ char* VisitorTraverseFunctionDeclaration(VisitorType* visitor, ASTreeType* node)
     char* name=node->name.function_def_name;
     char* type;
     char* args=calloc(1,1);
-    char* returntype;
+    char* returntype="";
     ASTreeType* current;
-
-    // Return type
-    if(node->val_type.function_def_return_type==NULL)
-    {
-        for(Int i=1;i<node->funcbody->RootValue->size+1;i++)
-        {
-            if(i>node->funcbody->RootValue->size)
-            {
-                visitor->memory.std_includes.boost_any=1;
-                returntype="boost::any";
-                break;
-            }
-            current=node->funcbody->RootValue->trees[i];
-            if(current->type==AST_RETURN)
-            {
-                if(strcmp(name,"main")==0)
-                {
-                    returntype="int";
-                    node->val_type.function_def_return_type="int";
-                    break;
-                }
-
-                visitor->memory.std_includes.boost_any=1;
-                returntype="boost::any";
-                break;
-            }
-        }
-
-        returntype="void";
-    }
-    else
-    {
-        if(strcmp(node->val_type.variable_def_value_type,"any")==0)
-            returntype="boost::any";
-        else if(strcmp(node->val_type.variable_def_value_type,"str")==0)
-            returntype="std::string";
-        else
-            returntype=node->val_type.function_def_return_type;
-    }
 
     // Arguments
     visitor->scope.current_scope='f';
@@ -695,7 +731,7 @@ char* VisitorTraverseFunctionDeclaration(VisitorType* visitor, ASTreeType* node)
         }
         else if(strcmp(current->val_type.variable_def_value_type,"str")==0)
         {
-            visitor->memory.std_includes.boost_any=1;
+            visitor->memory.std_includes.string=1;
             type="std::string";
         }
         else
@@ -721,14 +757,71 @@ char* VisitorTraverseFunctionDeclaration(VisitorType* visitor, ASTreeType* node)
 
     visitor->memory.current=node;
 
-    char* block=VisitorTraverseRoot(visitor,node->funcbody,1);
+    ++visitor->memory.indent;
 
-    returntype=visitor->memory.current->val_type.function_def_return_type;
+    // Body
+    char* block=VisitorTraverseRoot(visitor,node->funcbody, 0);
+    --visitor->memory.indent;
+
+    // Return type
+    if(node->val_type.function_def_return_type==NULL)
+    {
+        if(strcmp(name,"main")==0)
+        {
+            returntype="int";
+            node->val_type.function_def_return_type="int";
+        }
+        else
+        {
+            for(Int i=1;i<node->funcbody->RootValue->size+1;i++)
+            {
+                if(i>node->funcbody->RootValue->size)
+                {
+                    returntype="void";
+                    break;
+                }
+                current=node->funcbody->RootValue->trees[i];
+                if(current->type==AST_RETURN)
+                {
+                    visitor->memory.std_includes.boost_any=1;
+                    returntype=VisitorGetType(visitor,current->RootValue->trees[1]);
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        if(strcmp(node->val_type.function_def_return_type,"any")==0)
+            returntype="boost::any";
+        else if(strcmp(node->val_type.function_def_return_type,"str")==0)
+            returntype="std::string";
+        else
+        {
+            returntype=node->val_type.function_def_return_type;
+        }
+    }
+
+    if(strcmp(returntype,"")==0)
+    {
+        returntype="void";
+    }
+    else
+    {
+        //printf("%s\n",returntype);
+    }
 
     char* code=calloc(1,1);
-    code=realloc(code,strlen(name)+strlen(args)+strlen(block)+strlen(returntype)+10+1);
-    sprintf(code,"%s %s(%s)\n{\n%s}\n",returntype,name,args,block);
+    code=realloc(code,strlen(name)+strlen(args)+strlen(block)+strlen(returntype)+visitor->memory.indent+7+1);
+    sprintf(code,"%s %s(%s){\n%s",returntype,name,args,block);
 
+    for(Int i=0;i<visitor->memory.indent;++i)
+        strcat(code,"\t");
+    strcat(code,"}");
+
+    node->val_type.function_def_return_type=returntype;
+
+    
     visitor->scope.current_scope='g';
     DestroyASTreeArray(visitor->scope.func_local);
     visitor->scope.func_local=InitNodeArray(sizeof(struct ASTreeStructure));
@@ -750,6 +843,7 @@ char* VisitorTraverseReturn(VisitorType* visitor, ASTreeType* node)
     char* returntype;
     char* code;
     char errorcode=0;
+    char typeisany=0;
 
     ASTreeType* func=visitor->memory.current;
 
@@ -777,9 +871,13 @@ char* VisitorTraverseReturn(VisitorType* visitor, ASTreeType* node)
     }
 
     if(func->val_type.function_def_return_type==NULL)
-        returntype="boost::any";
+    {
+        returntype=VisitorPurifyType(VisitorGetType(visitor,node->RootValue->trees[1]));
+    }
     else
+    {
         returntype=func->val_type.function_def_return_type;
+    }
 
     // return type checking
     if(strcmp(returntype,"any")!=0)
@@ -801,79 +899,19 @@ char* VisitorTraverseReturn(VisitorType* visitor, ASTreeType* node)
         }
         else if(strcmp(returntype,"auto")==0)
         {
-            switch(node->RootValue->trees[1]->type)
-            {
-                case AST_INTEGER: returntype="int"; break;
-                case AST_FLOAT: returntype="float"; break;
-                case AST_STRING: returntype="std::string"; break;
-                case AST_BOOL: returntype="bool"; break;
-                case AST_CHARACTER: returntype="char"; break;
-
-                default:
-                {   
-                    if(strcmp(VisitorGetVariableType(visitor, func->args.function_def_arguments, node->RootValue->trees[1]->name.variable_name),"boost::any")==0)
-                    {
-                        returntype="boost::any";
-                        break;
-                    }
-                    else if(strcmp(VisitorGetVariableType(visitor, func->args.function_def_arguments, node->RootValue->trees[1]->name.variable_name),"std::string")==0)
-                    {
-                        returntype="std::string";
-                        break;
-                    }
-                    else if(strcmp(VisitorGetVariableType(visitor, func->args.function_def_arguments, node->RootValue->trees[1]->name.variable_name),"auto")==0)
-                    {
-                        returntype="auto";
-                        break;
-                    }
-                    else
-                    {
-                        char* type=VisitorGetVariableType(visitor, func->args.function_def_arguments, node->RootValue->trees[1]->name.variable_name);
-                        if(strcmp(type,"int")==0)
-                        {
-                            returntype="int";
-                            break;
-                        }
-                        else if(strcmp(type,"float")==0)
-                        {
-                            returntype="float";
-                            break;
-                        }
-                        else if(strcmp(type,"bool")==0)
-                        {
-                            returntype="bool";
-                            break;
-                        }
-                        else if(strcmp(type,"char")==0)
-                        {
-                            returntype="char";
-                            break;
-                        }
-                        else
-                        {
-                            printf("Return type %s is not supported\n",type);
-                            exit(1);
-                            return NULL;
-                        }  
-                    }
-                }
-            }
+            returntype=VisitorGetType(visitor, node->RootValue->trees[1]);
         }
         else if(strcmp(returntype,"str")==0)
         {
-            if(node->RootValue->trees[1]->type!=AST_STRING)
-                errorcode=1;
             returntype = "std::string";
         }
         else if(strcmp(returntype,"int")==0)
         {
-            if(node->RootValue->trees[1]->type!=AST_INTEGER)
-                errorcode=1;
+            returntype = "int";
         }
         else if(strcmp(returntype,"bool")==0)
         {
-            if(node->RootValue->trees[1]->type!=AST_BOOL)
-                errorcode=1;
+            returntype = "bool";
         }
         else
         {
@@ -884,15 +922,22 @@ char* VisitorTraverseReturn(VisitorType* visitor, ASTreeType* node)
     }
     else
     {
-        returntype="boost::any";
+        typeisany=1;
+        returntype="boost::any"; 
+    }
+
+    if(strcmp(returntype,VisitorGetType(visitor,node->RootValue->trees[1]))!=0)
+    {
+        errorcode=1;
     }
 
     if(errorcode==1)
     {
-        printf("Return type %s cannot be returned by function %s with type %s\n",
-               node->RootValue->trees[1]->val_type.variable_def_value_type,
+        char* variable_type=VisitorGetType(visitor, node->RootValue->trees[1]);
+        printf("Type `%s` cannot be returned by function `%s` with return type `%s`\n",
+               VisitorPurifyType(variable_type),
                func->name.function_def_name, 
-               returntype);
+               VisitorPurifyType(returntype));
         exit(1);
         return NULL;
     }
@@ -902,11 +947,26 @@ char* VisitorTraverseReturn(VisitorType* visitor, ASTreeType* node)
     
     if(node->RootValue->trees[1]->type==AST_VARIABLE)
     {
+        if(typeisany)
+        {
+            if(strcmp(returntype,VisitorGetType(visitor,node->RootValue->trees[1]))!=0)
+            {
+                printf("Can only return a variable with type `any` from function `%s` with return type `any`\n",func->name.function_def_name);
+                exit(1);
+                return NULL;
+            }
+        }
         code=calloc(strlen("return ")+strlen(node->RootValue->trees[1]->name.variable_name)+1,1);
         sprintf(code,"return %s",node->RootValue->trees[1]->name.variable_name);
     }
     else
     {
+        if(typeisany)
+        {
+            printf("Can only return a variable from return type `any` in function `%s`\n",func->name.function_def_name);
+            exit(1);
+            return NULL;
+        }
         char* value=VisitorTraverseNode(visitor,node->RootValue->trees[1]);
         code=calloc(strlen("return ")+strlen(value)+1,1);
         sprintf(code,"return %s",value);
@@ -926,15 +986,9 @@ char* VisitorTraverseParenthesis(VisitorType* visitor, ASTreeType* node, NodeArr
 
     NodeArrayType* scope;
 
-    switch(visitor->scope.current_scope)
-    {
-        case 'g': scope=visitor->scope.global; break;
-        case 'c': scope=visitor->scope.class_local; break;
-        default: scope=visitor->scope.func_local; break;
-    }
+    scope=VisitorGetScope(visitor);
 
     ASTreeType* variable;
-    ASTreeType* function;
 
     for(Int i=1;i<arr->size+1;i++)
     {
@@ -943,11 +997,20 @@ char* VisitorTraverseParenthesis(VisitorType* visitor, ASTreeType* node, NodeArr
 
         if(check)
         {
-            function=VisitorGetFunction(visitor, scope, node->name.function_call_name);
-            variable=VisitorGetVariable(visitor, scope, arr->trees[i]->name.variable_name);
-            if(VisitorCheckFunctionArgType(visitor, function, variable->val_type.variable_def_value_type,i)==0)
+            //function=VisitorGetFunction(visitor, scope, node->name.function_call_name);
+            char* type;
+            if(arr->trees[i]->type==AST_VARIABLE)
             {
-                printf("Invalid function argument type\n");
+                variable=VisitorGetVariable(visitor, scope, arr->trees[i]->name.variable_name);
+                type=variable->val_type.variable_def_value_type;
+            }
+            else
+            {
+                type=VisitorGetType(visitor, arr->trees[i]);
+            }
+            if(strcmp(VisitorGetType(visitor,arr->trees[i]),type)!=0)
+            {
+                printf("Invalid function argument type %s, needs %s\n",type, arr->trees[i]->val_type.variable_def_value_type);
                 exit(1);
                 return NULL;
             }
@@ -977,6 +1040,156 @@ char* VisitorTraverseEchoCall(VisitorType* visitor, ASTreeType* node)
     strcat(code," << std::endl");
 
     free(paren);
+
+    return code;
+}
+
+char* VisitorTraverseConditions(VisitorType* visitor, ASTreeType* node)
+{
+    ASTreeType* first;
+    ASTreeType* second;
+
+    char* code=calloc(1,1);
+
+    if(strcmp(VisitorGetType(visitor,node->RootValue->trees[1]),VisitorGetType(visitor,node->RootValue->trees[2]))!=0)
+    {
+        printf("Type mismatch in condition\n");
+        exit(1);
+        return NULL;
+    }
+
+    first=node->RootValue->trees[1];
+    second=node->RootValue->trees[2];
+
+    char* first_code=VisitorTraverseNode(visitor,first);
+    char* second_code=VisitorTraverseNode(visitor,second);
+
+    char* operator;
+    switch (node->type)
+    {
+        case AST_MOD: operator="%"; break;
+        case AST_CHKEQ: operator="==";break;
+        case AST_CHKNEQ: operator="!=";break;
+        case AST_CHKGREATER: operator=">";break;
+        case AST_CHKLESS: operator="<";break;
+        case AST_CHKGREATEREQ: operator=">=";break;
+        case AST_CHKLESSEQ: operator="<=";break;
+
+        default: printf("Condition type not implemented\n"); exit(1); break;
+    }
+
+    code=realloc(code,strlen(first_code)+strlen(second_code)+strlen(operator)+1);
+    sprintf(code,"%s%s%s",first_code,operator,second_code);
+
+    return code;
+}
+
+char* VisitorTraverseIf(VisitorType* visitor, ASTreeType* node)
+{
+    char* code=calloc(1,1);
+
+    char* condition=VisitorTraverseNode(visitor,node->ifexpr);
+
+    ++visitor->memory.indent;
+    char* block=VisitorTraverseRoot(visitor,node->ifbody,0);
+    --visitor->memory.indent;
+
+    code=realloc(code,strlen("if(){}\n\t")+strlen(condition)+strlen(block)+(visitor->memory.indent)+2);
+    sprintf(code,"if(%s){\n\t%s",condition,block);
+    for(Int i=0;i<visitor->memory.indent;++i)
+        strcat(code,"\t");
+    strcat(code,"}");
+    free(block);
+
+    if(node->ifelse!=NULL)  // if it has an else-if 
+    {
+        char* elseifcode=calloc(1,1);
+        char* elseifcode_if=VisitorTraverseIf(visitor,node->ifelse);
+        elseifcode=realloc(elseifcode,strlen(elseifcode_if)+6);
+        sprintf(elseifcode,"else %s",elseifcode_if);
+
+        code=realloc(code,strlen(code)+strlen(elseifcode)+1);
+        strcat(code,elseifcode);
+        free(elseifcode_if);
+        free(elseifcode);
+    }
+
+    if(node->elsebody!=NULL)
+    {
+        char* elsecode=calloc(1,1);
+        ++visitor->memory.indent;
+        char* elseblock=VisitorTraverseRoot(visitor,node->elsebody,0);
+        --visitor->memory.indent;
+
+        elsecode=realloc(elsecode,strlen(elseblock)+visitor->memory.indent+9);
+        sprintf(elsecode,"else{\n\t%s",elseblock);
+        for(Int i=0;i<visitor->memory.indent;++i)
+            strcat(elsecode,"\t");
+        strcat(elsecode,"}");
+        free(elseblock);
+
+        code=realloc(code,strlen(code)+strlen(elsecode)+1);
+        strcat(code,elsecode);
+        free(elsecode);
+    }
+
+    return code;
+}
+
+char* VisitorTraverseArithmetic(VisitorType* visitor, ASTreeType* node)
+{
+    char* code=calloc(1,1);
+
+    char* first=VisitorTraverseNode(visitor,node->arithleft);
+    char* second=VisitorTraverseNode(visitor,node->arithright);
+
+    if(node->arithleft->type==AST_ADD
+    || node->arithleft->type==AST_SUB
+    || node->arithleft->type==AST_MUL
+    || node->arithleft->type==AST_DIV
+    || node->arithleft->type==AST_MOD)
+    {
+        code=realloc(code,strlen(first)+3);
+        strcat(code,"(");
+        strcat(code,first);
+        strcat(code,")");
+    }
+    else
+    {
+        code=realloc(code,strlen(first)+1);
+        strcat(code,first);
+    }
+
+    code=realloc(code,strlen(code)+2);
+    switch(node->type)
+    {
+        case AST_ADD: strcat(code,"+"); break;
+        case AST_SUB: strcat(code,"-"); break;
+        case AST_MUL: strcat(code,"*"); break;
+        case AST_DIV: strcat(code,"/"); break;
+        case AST_MOD: strcat(code,"%"); break;
+        default: printf("Arithmetic type not implemented\n"); exit(1); break;
+    }
+
+    if(node->arithright->type==AST_ADD
+    || node->arithright->type==AST_SUB
+    || node->arithright->type==AST_MUL
+    || node->arithright->type==AST_DIV
+    || node->arithright->type==AST_MOD)
+    {
+        code=realloc(code,strlen(code)+strlen(second)+3);
+        strcat(code,"(");
+        strcat(code,second);
+        strcat(code,")");
+    }
+    else
+    {
+        code=realloc(code,strlen(code)+strlen(second)+1);
+        strcat(code,second);
+    }
+
+    free(first);
+    free(second);
 
     return code;
 }

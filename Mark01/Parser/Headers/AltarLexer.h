@@ -7,12 +7,14 @@
 typedef struct LexerStructure{
 	char cursor;
 	char* src;
+	char* filename;
 	Int indx;
 	Int size;
+	Int line;
 }LexerType;
 
 // Initilization
-LexerType* InitLexer(char *src);
+LexerType* InitLexer(char *src, char* filename);
 
 // Voids
 void LexerAdvanceChar(LexerType* lexer);

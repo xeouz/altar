@@ -20,7 +20,7 @@ int main()
     file=InitIO("../Mark01/SyntaxTests/Test.altr");
     IOReadFile(file);
 
-    lexer=InitLexer(file->data);
+    lexer=InitLexer(file->data, file->src);
 
     parser=InitParser(lexer);
 
@@ -38,8 +38,7 @@ int main()
     */
 
     VisitorType* visitor=InitVisitor();
-    char* code=VisitorTraverseRoot(visitor,root,0);  // This is the main function that will be called by the compiler
-
+    char* code=VisitorTraverseRoot(visitor,root,1);  // This is the main function that will be called by the compiler
     printf("\n--- Code ---\n\n%s\n",code);
 
     return 0;

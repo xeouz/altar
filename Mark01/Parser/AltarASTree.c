@@ -55,8 +55,15 @@ char* ASTreeTypeToString(Int type)
 
 		case AST_ENDL: return "AST_ENDL";
 		case AST_BLOCK: return "AST_BLOCK";
-		case AST_PLACEHOLDER: return "AST_PLACEHOLDER";
+		case AST_ARITHPARENTHESIS: return "AST_ARITHPARENTHESIS";
 		case AST_ROOT: return "AST_ROOT";
+
+		case AST_CHKEQ: return "AST_CHKEQ";
+		case AST_CHKNEQ: return "AST_CHKNEQ";
+		case AST_CHKGREATER: return "AST_CHKGREATER";
+		case AST_CHKLESS: return "AST_CHKLESS";
+		case AST_CHKGREATEREQ: return "AST_CHKGREATEREQ";
+		case AST_CHKLESSEQ: return "AST_CHKLESSEQ";
 
         default: return "UNKNOWN";
     }

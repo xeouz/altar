@@ -54,6 +54,7 @@ ASTreeType* PopNodeArray(NodeArrayType* Array)
     if(Array->size<=0)
     {
         printf("Error: NodeArray is empty.\n");
+        exit(1);
         return 0;
     }
 

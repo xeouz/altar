@@ -26,6 +26,8 @@ typedef struct VisitorStructure
             char iostream;
             char string;
         }std_includes;
+
+        USInt indent;
     }memory;
 
     char* code;
@@ -42,12 +44,13 @@ char VisitorFunctionDeclared(VisitorType* visitor, NodeArrayType* scope, char* f
 ASTreeType* VisitorGetFunction(VisitorType* visitor, NodeArrayType* scope, char* func);
 char VisitorIsSTDFunction(char* func);
 char VisitorCheckFunctionArgType(VisitorType* visitor, ASTreeType* func, char* type, Int arg_index);
+char* VisitorGetConditionOperator(USInt op);
 
 ASTreeType* VisitorGetVariable(VisitorType* visitor, NodeArrayType* scope, char* var);
 
 ASTreeType* VisitorFindVariableDeclaration(VisitorType* visitor, char* var);
 
-char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, int indent);
+char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, char isHead);
 
 char* VisitorTraverseIncludes(VisitorType* visitor);
 char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node);
@@ -62,6 +65,11 @@ char* VisitorTraverseFunctionDeclaration(VisitorType* visitor, ASTreeType* node)
 char* VisitorTraverseReturn(VisitorType* visitor, ASTreeType* node);
 char* VisitorTraverseParenthesis(VisitorType* visitor, ASTreeType* node, NodeArrayType* arr, char* sep);
 
+char* VisitorTraverseConditions(VisitorType* visitor, ASTreeType* node);
+char* VisitorTraverseIf(VisitorType* visitor, ASTreeType* node);
+
 char* VisitorTraverseEchoCall(VisitorType* visitor, ASTreeType* node);
+
+char* VisitorTraverseArithmetic(VisitorType* visitor, ASTreeType* node);
 
 #endif

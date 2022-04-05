@@ -85,13 +85,13 @@ NodeArrayType* ArithPostfix(NodeArrayType* infix)
         }
         else
         {
-            if(Current->type==AST_PLACEHOLDER && Current->value.char_value=='(')
+            if(Current->type==AST_ARITHPARENTHESIS && Current->value.char_value=='(')
             {
                 AppendNodeArray(stack,Current);
             }
             else
             {
-                if(Current->type==AST_PLACEHOLDER && Current->value.char_value==')')
+                if(Current->type==AST_ARITHPARENTHESIS && Current->value.char_value==')')
                 {
                     while((Temp=PopNodeArray(stack))->value.char_value!='(')
                     {

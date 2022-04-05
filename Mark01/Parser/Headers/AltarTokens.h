@@ -9,6 +9,7 @@ typedef struct TokenStructure{
 		
 		TOKEN_EQUALS, // =
 		TOKEN_CHKEQUALS, // ==
+		TOKEN_NOTEQUALS, // !=
 
 		TOKEN_LPAREN, // (
 		TOKEN_LBRACK, // [
@@ -33,6 +34,8 @@ typedef struct TokenStructure{
 
 		TOKEN_RANGB, // >
 		TOKEN_LANGB, // <
+		TOKEN_RANGLE, // >=
+		TOKEN_LANGLE, // <=
 
 		TOKEN_ADD, // +
 		TOKEN_SUB, // -
