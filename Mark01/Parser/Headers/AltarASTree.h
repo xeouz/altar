@@ -30,6 +30,7 @@ typedef struct ASTreeStructure
 		AST_BOOL,
 		AST_ARRAY,
 		AST_BLOCK_ACCESS,
+		AST_MEMBER_ACCESS,
 
 		AST_VARIABLE_INCREMENT,
 		AST_VARIABLE_DECREMENT,
@@ -113,6 +114,7 @@ typedef struct ASTreeStructure
 	{
 		char* variable_def_value_type;
 		char* function_def_return_type;
+		char* array_value_type;
 	}val_type;
 
 	union 
@@ -143,6 +145,7 @@ typedef struct ASTreeStructure
 	struct ASTreeStructure* arithright;
 
 	struct ASTreeStructure* blockaccess;
+	struct ASTreeStructure* memaccess;
 
 	TokenType* leftexpr;
 	TokenType* rightexpr;

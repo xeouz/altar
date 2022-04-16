@@ -165,9 +165,34 @@ ASTreeType* ParserParseStatement(ParserType* parser)
         default: printf("Unknown Token Type: %s\n",parser->PreviousToken->value); break;
     }
 
-    parser->PreviousAST = AST;
+    parser->PreviousAST=AST;
 
-    return AST;
+    ASTreeType* AST2;
+
+    switch (parser->CurrentToken->type)
+    {
+        default: {
+            if(parser->PreviousAST->type==AST_VARIABLE
+            || parser->PreviousAST->type==AST_BLOCK_ACCESS
+            || parser->PreviousAST->type==AST_FUNCTION_CALL)
+            {
+                if(parser->CurrentToken->type==TOKEN_DOT)
+                {
+                    AST2=ParserParseMemberAccess(parser);
+                }
+                else
+                {
+                    return AST;
+                }
+            }
+            else
+            {
+                return AST;
+            }
+        };
+    }
+
+    return AST2;
 }
 
 // Parse multiple statements
@@ -418,7 +443,6 @@ ASTreeType* ParserParseExpression(ParserType* parser)
     }
 
     parser->PreviousAST=AST;
-
     ASTreeType* AST2;
 
     switch(parser->CurrentToken->type)
@@ -436,7 +460,25 @@ ASTreeType* ParserParseExpression(ParserType* parser)
         case TOKEN_LANGB: AST2=ParserParseConditions(parser);break;
         case TOKEN_RANGB: AST2=ParserParseConditions(parser);break;
 
-        default: return AST;
+        default: {
+            if(parser->PreviousAST->type==AST_VARIABLE
+            || parser->PreviousAST->type==AST_BLOCK_ACCESS
+            || parser->PreviousAST->type==AST_FUNCTION_CALL)
+            {
+                if(parser->CurrentToken->type==TOKEN_DOT)
+                {
+                    AST2=ParserParseMemberAccess(parser);
+                }
+                else
+                {
+                    return AST;
+                }
+            }
+            else
+            {
+                return AST;
+            }
+        };break;
     }
 
     return AST2;
@@ -652,21 +694,26 @@ ASTreeType* ParserParseVariable(ParserType* parser)
 
         return ParserParseAssignment(parser, variable);
     }
-    else if(parser->CurrentToken->type==TOKEN_LPAREN)
-    {
-        return ParserParseFunctionCall(parser);
-    }
     else if(parser->CurrentToken->type==TOKEN_LBRACK)
     {
-        ASTreeType* variable=InitASTree(AST_BLOCK_ACCESS);
-        variable->name.variable_name=variableName;
-
-        ASTreeType* access= ParserParseBlockAccess(parser, variable);
+        ASTreeType* access=InitASTree(AST_BLOCK_ACCESS);
+        access->name.variable_name=variableName;
+        
+        ParserAdvanceToken(parser,TOKEN_LBRACK);
+        access->blockaccess=ParserParseExpression(parser);
+        ParserAdvanceToken(parser,TOKEN_RBRACK);
 
         if(parser->CurrentToken->type==TOKEN_EQUALS)
         {
-            access->tree_child=ParserParseAssignment(parser, access->tree_child);
+
+            ASTreeType* assignment=InitASTree(AST_VARIABLE_ASSIGNMENT);
+            assignment->name.variable_name=variableName;
+            assignment=ParserParseAssignment(parser,assignment);
+            assignment->blockaccess=access;
+
+            return assignment;
         }
+
         return access;
     }
     else if(parser->CurrentToken->type==TOKEN_INCR)
@@ -781,18 +828,6 @@ ASTreeType* ParserParseArray(ParserType* parser)
 
     ParserAdvanceToken(parser,TOKEN_RBRACK);
 
-    return AST;
-}
-
-ASTreeType* ParserParseBlockAccess(ParserType* parser, ASTreeType* variable)
-{
-    ASTreeType* AST=InitASTree(AST_BLOCK_ACCESS);
-
-    ParserAdvanceToken(parser,TOKEN_LBRACK);
-    variable->blockaccess=ParserParseExpression(parser);
-    ParserAdvanceToken(parser,TOKEN_RBRACK);
-
-    AST->tree_child=variable;
     return AST;
 }
 
@@ -919,6 +954,18 @@ ASTreeType* ParserParseClass(ParserType* parser)
     }
 
     AST->classbody=ParserParseBlock(parser);
+
+    return AST;
+}
+
+ASTreeType* ParserParseMemberAccess(ParserType* parser)
+{
+    ASTreeType* AST=InitASTree(AST_MEMBER_ACCESS);
+    AST->memaccess=parser->PreviousAST;
+
+    ParserAdvanceToken(parser,TOKEN_DOT);
+    
+    AST->tree_child=ParserParseExpression(parser);
 
     return AST;
 }

@@ -45,6 +45,9 @@ ASTreeType* VisitorGetFunction(VisitorType* visitor, NodeArrayType* scope, char*
 char VisitorIsSTDFunction(char* func);
 char VisitorCheckFunctionArgType(VisitorType* visitor, ASTreeType* func, char* type, Int arg_index);
 char* VisitorGetConditionOperator(USInt op);
+char* VisitorGetArrayType(VisitorType* visitor, ASTreeType* node);
+
+char* VisitorGetType(VisitorType* visitor, ASTreeType* node);
 
 ASTreeType* VisitorGetVariable(VisitorType* visitor, NodeArrayType* scope, char* var);
 
@@ -68,7 +71,12 @@ char* VisitorTraverseParenthesis(VisitorType* visitor, ASTreeType* node, NodeArr
 char* VisitorTraverseConditions(VisitorType* visitor, ASTreeType* node);
 char* VisitorTraverseIf(VisitorType* visitor, ASTreeType* node);
 
+char* VisitorTraverseArray(VisitorType* visitor, ASTreeType* node);
+
 char* VisitorTraverseEchoCall(VisitorType* visitor, ASTreeType* node);
+
+char* VisitorTraverseMemberAccess(VisitorType* visitor, ASTreeType* node);
+char* VisitorTraverseBlockAccess(VisitorType* visitor, ASTreeType* node);
 
 char* VisitorTraverseArithmetic(VisitorType* visitor, ASTreeType* node);
 

@@ -65,6 +65,11 @@ char* ASTreeTypeToString(Int type)
 		case AST_CHKGREATEREQ: return "AST_CHKGREATEREQ";
 		case AST_CHKLESSEQ: return "AST_CHKLESSEQ";
 
+		case AST_ARRAY: return "AST_ARRAY";
+
+		case AST_MEMBER_ACCESS: return "AST_MEMBER_ACCESS";
+		case AST_BLOCK_ACCESS: return "AST_BLOCK_ACCESS";
+
         default: return "UNKNOWN";
     }
 }

@@ -1,4 +1,11 @@
+func print_num(number:int) -> void
+{
+    echo("The number is "+number);
+}
+
 func main()
 {
-    her`
+    var number = 1;
+
+    print_num(number);
 }

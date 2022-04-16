@@ -93,7 +93,7 @@ ASTreeType* VisitorGetVariable(VisitorType* visitor, NodeArrayType* scope, char*
     {
         if(i>scope->size)
         {
-            break;
+            return NULL;
         }
 
         if(strcmp(scope->trees[i]->name.variable_def_name,var)==0)
@@ -106,17 +106,16 @@ ASTreeType* VisitorGetVariable(VisitorType* visitor, NodeArrayType* scope, char*
     {
         for(Int i=1;i<visitor->scope.global->size+1;++i)
         {
-            if(i>visitor->scope.global->size)
+            if(i>scope->size)
             {
                 return NULL;
             }
-
             if(strcmp(visitor->scope.global->trees[i]->name.variable_def_name,var)==0)
             {
                 return visitor->scope.global->trees[i];
             }
         }
-    } 
+    }
 
     return 0;
 }
@@ -242,6 +241,33 @@ NodeArrayType* VisitorGetScope(VisitorType* visitor)
     return scope;
 }
 
+char* VisitorGetArrayType(VisitorType* visitor, ASTreeType* node)
+{
+    char* type="";
+
+    if(node->RootValue->size==0)
+        return "";
+
+    type=VisitorGetType(visitor,node->RootValue->trees[1]);
+    char* current_type;
+
+    for(Int i=1;i<node->RootValue->size+1;++i)
+    {
+        current_type=VisitorGetType(visitor,node->RootValue->trees[i]);
+
+        if(strcmp(type,current_type)==0)
+        {
+            type=current_type;
+        }
+        else
+        {
+            type="boost::any";
+        }
+    }
+
+    return type;
+}
+
 char* VisitorGetType(VisitorType* visitor, ASTreeType* node)
 {
     switch(node->type)
@@ -258,6 +284,8 @@ char* VisitorGetType(VisitorType* visitor, ASTreeType* node)
         case AST_DIV: return VisitorGetType(visitor,node->arithleft);
         case AST_MOD: return VisitorGetType(visitor,node->arithleft);
         case AST_ARITHPARENTHESIS: return VisitorGetType(visitor,node->tree_child->arithleft);
+
+        case AST_ARRAY: return VisitorGetArrayType(visitor,node);
 
         case AST_FUNCTION_CALL: {
             NodeArrayType* scope=VisitorGetScope(visitor);
@@ -346,10 +374,8 @@ char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, char isHead)
             code=realloc(code,(strlen(code)+2));
             strcat(code,";");
         }
-        {
-            code=realloc(code,(strlen(code)+2));
-            strcat(code,"\n");
-        }
+        code=realloc(code,(strlen(code)+2));
+        strcat(code,"\n");
         
         free(line);
     }
@@ -407,6 +433,11 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
 
         case AST_IF: return VisitorTraverseIf(visitor,node);
 
+        case AST_ARRAY: return VisitorTraverseArray(visitor,node);
+
+        case AST_MEMBER_ACCESS: return VisitorTraverseMemberAccess(visitor,node);
+        case AST_BLOCK_ACCESS: return VisitorTraverseBlockAccess(visitor,node);
+
         case AST_ADD: return VisitorTraverseArithmetic(visitor,node);
         case AST_SUB: return VisitorTraverseArithmetic(visitor,node);
         case AST_MUL: return VisitorTraverseArithmetic(visitor,node);
@@ -452,7 +483,7 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
         case AST_CHKGREATEREQ: return VisitorTraverseConditions(visitor,node);
         case AST_CHKLESSEQ: return VisitorTraverseConditions(visitor,node);
 
-        default: printf("Unknown Node Type: %s\n",ASTreeTypeToString(node->type)); exit(1); return NULL;
+        default: printf("Unknown Node Type: %s:%d\n",ASTreeTypeToString(node->type),node->type); exit(1); return NULL;
     }
 }
 
@@ -484,15 +515,9 @@ char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
     char* variable="";
 
     char explicit_value=0, free_variable_value=0;
-    NodeArrayType* scope;
+    NodeArrayType* scope=VisitorGetScope(visitor);
 
     // Check for the scope and assign the current scope
-    switch(visitor->scope.current_scope)
-    {
-        case 'g': scope=visitor->scope.global; break;
-        case 'c': scope=visitor->scope.class_local; break;
-        default: scope=visitor->scope.func_local; break;
-    }
 
     // Check if the variable is already declared
     if(VisitorVariableDeclared(visitor,scope,node->name.variable_def_name))
@@ -566,10 +591,23 @@ char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
     */
     //sprintf(variable,"%s %s = %s",variable_type,variable_name,variable_value);
 
-    variable=calloc(strlen(variable_type)+strlen(variable_name)+strlen(variable_value)+6,1);
+    char* addname=calloc(1,1);
+
+    if(node->tree_child!=NULL && node->tree_child->type==AST_ARRAY)
+    {
+        addname=realloc(addname,strlen(variable_name)+2);
+        sprintf(addname,"%s[]",variable_name);
+    }
+    else
+    {
+        addname=realloc(addname,strlen(variable_name)+1);
+        sprintf(addname,"%s",variable_name);
+    }
+
+    variable=calloc(strlen(variable_type)+strlen(addname)+strlen(variable_value)+6,1);
     if(explicit_value)
     {
-        sprintf(variable,"%s %s = %s",variable_type,variable_name,variable_value);
+        sprintf(variable,"%s %s = %s",variable_type,addname,variable_value);
     }
     else
     {
@@ -612,7 +650,20 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
         return NULL;
     }
 
-    char* variable_name=node->name.variable_name;
+    char* variable_name="";
+    char* add_name="";
+
+    variable_name=node->name.variable_name;
+
+    if(node->blockaccess!=NULL)
+    {
+        add_name=VisitorTraverseBlockAccess(visitor,node->blockaccess);
+    }
+    else
+    {
+        add_name=variable_name;
+    }
+
     ASTreeType* variable=VisitorGetVariable(visitor,scope,variable_name);
 
     char diff_type=0;
@@ -627,7 +678,7 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
         diff_type=1;
     }
 
-    char* variable_value;
+    char* variable_value="";
 
     variable_value=VisitorTraverseNode(visitor,node->tree_child);
 
@@ -638,9 +689,9 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
         return NULL;
     }
 
-    char* variable_str=calloc(strlen(variable_name)+strlen(variable_value)+5,1);
+    char* variable_str=calloc(strlen(add_name)+strlen(variable_value)+5,1);
 
-    sprintf(variable_str,"%s = %s",variable_name,variable_value);
+    sprintf(variable_str,"%s = %s",add_name,variable_value);
 
     return variable_str;
 }
@@ -820,7 +871,6 @@ char* VisitorTraverseFunctionDeclaration(VisitorType* visitor, ASTreeType* node)
     strcat(code,"}");
 
     node->val_type.function_def_return_type=returntype;
-
     
     visitor->scope.current_scope='g';
     DestroyASTreeArray(visitor->scope.func_local);
@@ -1134,6 +1184,83 @@ char* VisitorTraverseIf(VisitorType* visitor, ASTreeType* node)
     }
 
     return code;
+}
+
+char* VisitorTraverseArray(VisitorType* visitor, ASTreeType* node)
+{
+    char* code=calloc(2,1);
+    strcat(code,"{");
+    
+    for(Int i=1;i<node->RootValue->size+1;++i)
+    {
+        char* statement=VisitorTraverseNode(visitor,node->RootValue->trees[i]);
+        code=realloc(code,strlen(code)+strlen(statement)+1);
+        strcat(code,statement);
+
+        if(i!=node->RootValue->size)
+        {
+            code=realloc(code,strlen(code)+2);
+            strcat(code,",");
+        }
+
+        free(statement);
+    }
+
+    code=realloc(code,strlen(code)+2);
+    strcat(code,"}");
+
+    return code;
+}
+
+char* VisitorTraverseMemberAccess(VisitorType* visitor, ASTreeType* node)
+{
+    if(node->tree_child->type!=AST_VARIABLE
+    && node->tree_child->type!=AST_FUNCTION_CALL)
+    {
+        printf("Member access can only be done on variables and function calls\n");
+        exit(1);
+        return NULL;
+    }
+
+    char* code=calloc(1,1);
+
+    char* head=VisitorTraverseNode(visitor,node->memaccess);
+    char* tail=VisitorTraverseNode(visitor,node->tree_child);
+
+    code=realloc(code,strlen(head)+strlen(tail)+2);
+    strcat(code,head);
+    strcat(code,".");
+    strcat(code,tail);
+
+    return code;
+}
+
+char* VisitorTraverseBlockAccess(VisitorType* visitor, ASTreeType* node)
+{
+    if(node->blockaccess->type!=AST_INTEGER && node->blockaccess->type!=AST_VARIABLE)
+    {
+        printf("Block access can only be done with integers, not on %s\n",ASTreeTypeToString(node->blockaccess->type));
+        exit(1);
+        return NULL;
+    }
+
+    ASTreeType* var=VisitorGetVariable(visitor,VisitorGetScope(visitor),node->name.variable_name);
+    if(var->tree_child->type!=AST_ARRAY)
+    {
+        printf("Block access can only be done on arrays\n");
+        exit(1);
+        return NULL;
+    }
+
+    int intval=node->blockaccess->value.integer_value;
+
+    char* intstr=calloc(intval==0?1:log10((double)intval)+2,1);
+    sprintf(intstr,"%d",intval);
+
+    char* varname=calloc(strlen(intstr)+strlen(node->name.variable_name)+2,1);
+    sprintf(varname,"%s[%s]",node->name.variable_name,intstr);
+
+    return varname;
 }
 
 char* VisitorTraverseArithmetic(VisitorType* visitor, ASTreeType* node)

@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/Mark01/Executable/runner.exe",
             "args": [],
             "stopAtEntry": true,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}/Mark01/",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

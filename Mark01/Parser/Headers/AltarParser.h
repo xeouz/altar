@@ -63,6 +63,8 @@ ASTreeType* ParserParseFunction(ParserType* parser);
 ASTreeType* ParserParseFunctionCall(ParserType* parser);
 ASTreeType* ParserParseClass(ParserType* parser);
 
+ASTreeType* ParserParseMemberAccess(ParserType* parser);
+
 ASTreeType* ParserParseArithmetic(ParserType* parser);
 ASTreeType* ParserParseArithParenthesis(ParserType* parser);
 
