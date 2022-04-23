@@ -444,10 +444,28 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
         case AST_DIV: return VisitorTraverseArithmetic(visitor,node);
         case AST_MOD: return VisitorTraverseArithmetic(visitor,node);
 
+        //case AST_FOR: return VisitorTraverseFor(visitor,node);
+
+        case AST_VARIABLE_DECREMENT: {
+            char* code=calloc(strlen(node->name.variable_name)+3,1);
+            sprintf(code,"%s--",node->name.variable_name);
+
+            return code;
+        }
+
+        case AST_VARIABLE_INCREMENT: {
+            char* code=calloc(strlen(node->name.variable_name)+3,1);
+            sprintf(code,"%s++",node->name.variable_name);
+
+            return code;
+        }
+
         case AST_ARITHPARENTHESIS: {
-            char* code=calloc(1,1);
+            char* code=calloc(2,1);
             strcat(code,"(");
-            strcat(code,VisitorTraverseNode(visitor,node->tree_child));
+            char* paren=VisitorTraverseNode(visitor,node->tree_child);
+            code=realloc(code,strlen(paren)+3);
+            strcat(code,paren);
             strcat(code,")");
             return code;
         }
@@ -567,6 +585,12 @@ char* VisitorTraverseVariableDeclaration(VisitorType* visitor, ASTreeType* node)
         }
     }
 
+    if(strcmp(VisitorPurifyType(variable_type),"any")==0)
+    {
+        printf("Cannot use type `any` as a variable type for now\n");
+        exit(1);
+    }
+
     node->val_type.variable_def_value_type=variable_type;
     
     // - Variable value
@@ -669,7 +693,20 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
     char diff_type=0;
 
     // Checking definition type
-    if(strcmp(VisitorPurifyType(variable->val_type.variable_def_value_type),VisitorPurifyType(VisitorGetType(visitor,node->tree_child)))==0)
+    char* var_value_type="";
+
+    if(variable->tree_child->type==AST_ARRAY && node->blockaccess==NULL)
+    {
+        var_value_type="arr";
+    }
+    else
+    {
+        var_value_type=VisitorPurifyType(VisitorGetType(visitor,variable->tree_child));
+    }
+
+    char* assign_value_type=VisitorPurifyType(VisitorGetType(visitor,node->tree_child));
+
+    if(strcmp(var_value_type,assign_value_type)==0)
     {
         diff_type=0;
     }
@@ -684,7 +721,7 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
 
     if(diff_type)
     {
-        printf("Variable %s cannot be assigned %s\n",variable_name,variable_value);
+        printf("Variable %s with type %s cannot be assigned %s\n",add_name,var_value_type,variable_value);
         exit(1);
         return NULL;
     }
@@ -1206,6 +1243,8 @@ char* VisitorTraverseArray(VisitorType* visitor, ASTreeType* node)
         free(statement);
     }
 
+    node->value.array_size=node->RootValue->size;
+
     code=realloc(code,strlen(code)+2);
     strcat(code,"}");
 
@@ -1248,6 +1287,13 @@ char* VisitorTraverseBlockAccess(VisitorType* visitor, ASTreeType* node)
     if(var->tree_child->type!=AST_ARRAY)
     {
         printf("Block access can only be done on arrays\n");
+        exit(1);
+        return NULL;
+    }
+
+    if((var->tree_child->value.array_size-1)<node->blockaccess->value.integer_value)
+    {
+        printf("Block access index out of bounds\n");
         exit(1);
         return NULL;
     }

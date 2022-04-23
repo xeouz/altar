@@ -108,6 +108,7 @@ typedef struct ASTreeStructure
 		SInt integer_value;
 		IChar bool_value;
 		char* float_value;
+		Int array_size;
 	}value;
 
 	union

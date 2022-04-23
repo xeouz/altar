@@ -1,11 +1,6 @@
-func print_num(number:int) -> void
-{
-    echo("The number is "+number);
-}
-
 func main()
 {
-    var number = 1;
+    var a = 10;
 
-    print_num(number);
+    a+=10;
 }
