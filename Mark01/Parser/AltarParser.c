@@ -580,10 +580,19 @@ ASTreeType* ParserParseConditions(ParserType* parser)
 
 ASTreeType* ParserParseAssignment(ParserType* parser, ASTreeType* variable)
 {
-    ParserAdvanceToken(parser,TOKEN_EQUALS);
-
+    if(parser->CurrentToken->type==TOKEN_ADDEQ
+    || parser->CurrentToken->type==TOKEN_SUBEQ
+    || parser->CurrentToken->type==TOKEN_MULEQ
+    || parser->CurrentToken->type==TOKEN_DIVEQ
+    || parser->CurrentToken->type==TOKEN_MODEQ)
+    {
+        ParserAdvanceToken(parser,parser->CurrentToken->type);
+    }
+    else
+    {
+        ParserAdvanceToken(parser,TOKEN_EQUALS);
+    }
     variable->tree_child=ParserParseExpression(parser);
-    variable->opts.assignment=1;
 
     return variable;
 }
@@ -731,6 +740,19 @@ ASTreeType* ParserParseVariable(ParserType* parser)
         variable->name.variable_name=variableName;
         variable->opts.preincrement_decrement=1; // post decrement
         return variable;
+    }
+    else if(parser->CurrentToken->type==TOKEN_ADDEQ
+        ||  parser->CurrentToken->type==TOKEN_SUBEQ
+        ||  parser->CurrentToken->type==TOKEN_MULEQ
+        ||  parser->CurrentToken->type==TOKEN_DIVEQ
+        ||  parser->CurrentToken->type==TOKEN_MODEQ)
+    {
+        ASTreeType* variable=InitASTree(AST_VARIABLE_ASSIGNMENT);
+        variable->name.variable_name=variableName;
+        variable->opts.assignment=1;
+        variable->opts.assignment_operator=parser->CurrentToken->type;
+
+        return ParserParseAssignment(parser,variable);
     }
 
     // Create the variable ASTree and set the name
@@ -886,11 +908,19 @@ ASTreeType* ParserParseFor(ParserType* parser)
     ASTreeType* AST=InitASTree(AST_FOR);
 
     ParserAdvanceToken(parser,TOKEN_LPAREN); // "("
-    AST->forinit=ParserParseStatement(parser);
-    ParserAdvanceToken(parser,TOKEN_SEMICOL); // ";"
-    AST->forcond=ParserParseExpression(parser);
-    ParserAdvanceToken(parser,TOKEN_SEMICOL); // ";"
-    AST->forinc=ParserParseStatement(parser);
+
+    AST->forline=InitNodeArray(sizeof(struct ASTreeStructure));
+
+    while(parser->CurrentToken->type!=TOKEN_RPAREN)
+    {
+        AppendNodeArray(AST->forline,ParserParseExpression(parser));
+
+        if(parser->CurrentToken->type==TOKEN_SEMICOL)
+        {
+            ParserAdvanceToken(parser,TOKEN_SEMICOL);
+        }
+    }
+
     ParserAdvanceToken(parser,TOKEN_RPAREN); // ")"
 
     if(parser->CurrentToken->type!=TOKEN_LBRACE)

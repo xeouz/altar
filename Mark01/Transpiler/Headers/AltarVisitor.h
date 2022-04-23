@@ -73,6 +73,8 @@ char* VisitorTraverseIf(VisitorType* visitor, ASTreeType* node);
 
 char* VisitorTraverseArray(VisitorType* visitor, ASTreeType* node);
 
+char* VisitorTraverseFor(VisitorType* visitor, ASTreeType* node);
+
 char* VisitorTraverseEchoCall(VisitorType* visitor, ASTreeType* node);
 
 char* VisitorTraverseMemberAccess(VisitorType* visitor, ASTreeType* node);

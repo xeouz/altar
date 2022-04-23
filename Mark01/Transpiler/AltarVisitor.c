@@ -444,18 +444,24 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
         case AST_DIV: return VisitorTraverseArithmetic(visitor,node);
         case AST_MOD: return VisitorTraverseArithmetic(visitor,node);
 
-        //case AST_FOR: return VisitorTraverseFor(visitor,node);
+        case AST_FOR: return VisitorTraverseFor(visitor,node);
 
         case AST_VARIABLE_DECREMENT: {
             char* code=calloc(strlen(node->name.variable_name)+3,1);
-            sprintf(code,"%s--",node->name.variable_name);
+            if(node->opts.preincrement_decrement==0)
+                sprintf(code,"--%s",node->name.variable_name);
+            else
+                sprintf(code,"%s--",node->name.variable_name);
 
             return code;
         }
 
         case AST_VARIABLE_INCREMENT: {
             char* code=calloc(strlen(node->name.variable_name)+3,1);
-            sprintf(code,"%s++",node->name.variable_name);
+            if(node->opts.preincrement_decrement==0)
+                sprintf(code,"++%s",node->name.variable_name);
+            else
+                sprintf(code,"%s++",node->name.variable_name);
 
             return code;
         }
@@ -471,7 +477,7 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
         }
 
         case AST_INTEGER: {
-            char* code=calloc(node->value.integer_value==0?1:log10((double)node->value.integer_value)+2,1);
+            char* code=calloc((int)(node->value.integer_value==0?1:log10((double)node->value.integer_value))+3,1);
             sprintf(code,"%d",node->value.integer_value);
             return code;
         }
@@ -726,9 +732,21 @@ char* VisitorTraverseVariableAssignment(VisitorType* visitor, ASTreeType* node)
         return NULL;
     }
 
-    char* variable_str=calloc(strlen(add_name)+strlen(variable_value)+5,1);
+    char* op;
 
-    sprintf(variable_str,"%s = %s",add_name,variable_value);
+    switch(node->opts.assignment_operator)
+    {
+        case TOKEN_ADDEQ: op="+="; break;
+        case TOKEN_SUBEQ: op="-="; break;
+        case TOKEN_MULEQ: op="*="; break;
+        case TOKEN_DIVEQ: op="/="; break;
+        case TOKEN_MODEQ: op="%="; break;
+        default: op="="; break;
+    }
+
+    char* variable_str=calloc(strlen(add_name)+strlen(op)+strlen(variable_value)+5,1);
+
+    sprintf(variable_str,"%s %s %s",add_name,op,variable_value);
 
     return variable_str;
 }
@@ -1316,6 +1334,27 @@ char* VisitorTraverseArithmetic(VisitorType* visitor, ASTreeType* node)
     char* first=VisitorTraverseNode(visitor,node->arithleft);
     char* second=VisitorTraverseNode(visitor,node->arithright);
 
+    if(node->arithleft->type==AST_STRING)
+    {
+        char* old_second=calloc(strlen(second)+1,1);
+        strcpy(old_second,second);
+
+        second=calloc(strlen(second)+strlen("std::to_string()"),1);
+        sprintf(second,"std::to_string(%s)",old_second);
+
+        free(old_second);
+    }
+    else if(node->arithright->type==AST_STRING)
+    {
+        char* old_first=calloc(strlen(first)+1,1);
+        strcpy(old_first,first);
+
+        first=calloc(strlen(first)+strlen("std::to_string()"),1);
+        sprintf(first,"std::to_string(%s)",old_first);
+
+        free(old_first);
+    }
+
     if(node->arithleft->type==AST_ADD
     || node->arithleft->type==AST_SUB
     || node->arithleft->type==AST_MUL
@@ -1363,6 +1402,79 @@ char* VisitorTraverseArithmetic(VisitorType* visitor, ASTreeType* node)
 
     free(first);
     free(second);
+
+    return code;
+}
+
+char* VisitorTraverseFor(VisitorType* visitor, ASTreeType* node)
+{
+    if(node->forline->size<3)
+    {
+        printf("For loop must have at least 3 statements\n");
+        exit(1);
+        return NULL;
+    }
+
+    char* initcode=calloc(1,1);
+
+    Int i=1;
+    do
+    {
+        char* statement=VisitorTraverseNode(visitor,node->forline->trees[i]);
+        initcode=realloc(initcode,strlen(initcode)+strlen(statement)+2);
+        strcat(initcode,statement);
+        strcat(initcode,";");
+        free(statement);
+
+        if(i==node->forline->size)
+        {
+            printf("Unexpected end of for line statement\n");
+            exit(1);
+            return NULL;
+        }
+
+        ++i;
+    } while (node->forline->trees[i]->type==AST_VARIABLE_ASSIGNMENT ||
+             node->forline->trees[i]->type==AST_VARIABLE_DECLARATION);
+
+    char* conditcode=VisitorTraverseNode(visitor,node->forline->trees[i]);
+    conditcode=realloc(conditcode,strlen(conditcode)+2);
+    strcat(conditcode,";");
+    ++i;
+
+    //printf("%s\n",node->forline->trees[i]->name.variable_name);
+
+    char* incode=calloc(1,1);
+    do
+    {
+        char* statement=VisitorTraverseNode(visitor,node->forline->trees[i]);
+        
+        incode=realloc(incode,strlen(incode)+strlen(statement)+2);
+        strcat(incode,statement);
+
+        if(i!=node->forline->size)
+            strcat(incode,";");
+        free(statement);
+
+        if(i==node->forline->size)
+        {
+            break;
+        }
+
+        ++i;
+    } while (node->forline->trees[i]->type==AST_VARIABLE_INCREMENT ||
+             node->forline->trees[i]->type==AST_VARIABLE_DECREMENT ||
+             node->forline->trees[i]->type==AST_VARIABLE_ASSIGNMENT);
+    
+    char* blockcode=VisitorTraverseRoot(visitor,node->forbody,0);
+    
+    char* code=calloc(strlen(initcode)+strlen(conditcode)+strlen(incode)+strlen(blockcode)+strlen("for(){}\n\t\n  ")+(visitor->memory.indent)+1,1);
+    sprintf(code,"for(%s %s %s){\n\t%s",initcode,conditcode,incode,blockcode);
+    for(i=0;i<visitor->memory.indent;++i)
+    {
+        strcat(code,"\t");
+    }
+    strcat(code,"}");
 
     return code;
 }

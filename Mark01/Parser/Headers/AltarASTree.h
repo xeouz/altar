@@ -123,6 +123,7 @@ typedef struct ASTreeStructure
 		char variable_def_is_const;
 		char preincrement_decrement;
 		char assignment;
+		Int assignment_operator;
 	}opts;
 	
 
@@ -134,9 +135,7 @@ typedef struct ASTreeStructure
 	struct ASTreeStructure* whileexpr;
 	struct ASTreeStructure* whilebody;
 
-	struct ASTreeStructure* forinit;
-	struct ASTreeStructure* forcond;
-	struct ASTreeStructure* forinc;
+	struct NodeArrayStructure* forline;
 	struct ASTreeStructure* forbody;
 
 	struct ASTreeStructure* funcbody;
