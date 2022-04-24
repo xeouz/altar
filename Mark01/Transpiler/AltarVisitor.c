@@ -360,10 +360,16 @@ char* VisitorTraverseRoot(VisitorType* visitor, ASTreeType* root, char isHead)
             break;
 
         line=VisitorTraverseNode(visitor,root->RootValue->trees[i]);
-        code=realloc(code,strlen(code)+strlen(line)+(isHead?0:2)+2);
+        code=realloc(code,strlen(code)+strlen(line)+(isHead?0:1)+(isHead?0:visitor->memory.indent)+2);
 
         if(!isHead)
             strcat(code,"\t");
+
+        if(!isHead)
+        {
+            for(Int j=0;j<visitor->memory.indent-1;++j)
+                strcat(code,"\t");
+        }
 
         strcat(code,line);
 
@@ -445,23 +451,46 @@ char* VisitorTraverseNode(VisitorType* visitor, ASTreeType* node)
         case AST_MOD: return VisitorTraverseArithmetic(visitor,node);
 
         case AST_FOR: return VisitorTraverseFor(visitor,node);
+        case AST_WHILE: return VisitorTraverseWhile(visitor,node);
 
         case AST_VARIABLE_DECREMENT: {
-            char* code=calloc(strlen(node->name.variable_name)+3,1);
+            char* name;
+
             if(node->opts.preincrement_decrement==0)
-                sprintf(code,"--%s",node->name.variable_name);
+            {
+                name=VisitorTraverseNode(visitor,node->tree_child);
+            }
             else
-                sprintf(code,"%s--",node->name.variable_name);
+            {
+                name=node->name.variable_name;
+            }
+
+            char* code=calloc(strlen(name)+3,1);
+            if(node->opts.preincrement_decrement==0)
+                sprintf(code,"--%s",name);
+            else
+                sprintf(code,"%s--",name);
 
             return code;
         }
 
         case AST_VARIABLE_INCREMENT: {
-            char* code=calloc(strlen(node->name.variable_name)+3,1);
+            char* name;
+
             if(node->opts.preincrement_decrement==0)
-                sprintf(code,"++%s",node->name.variable_name);
+            {
+                name=VisitorTraverseNode(visitor,node->tree_child);
+            }
             else
-                sprintf(code,"%s++",node->name.variable_name);
+            {
+                name=node->name.variable_name;
+            }
+
+            char* code=calloc(strlen(name)+3,1);
+            if(node->opts.preincrement_decrement==0)
+                sprintf(code,"++%s",name);
+            else
+                sprintf(code,"%s++",name);
 
             return code;
         }
@@ -1466,15 +1495,56 @@ char* VisitorTraverseFor(VisitorType* visitor, ASTreeType* node)
              node->forline->trees[i]->type==AST_VARIABLE_DECREMENT ||
              node->forline->trees[i]->type==AST_VARIABLE_ASSIGNMENT);
     
+    ++visitor->memory.indent;
     char* blockcode=VisitorTraverseRoot(visitor,node->forbody,0);
+    --visitor->memory.indent;
     
-    char* code=calloc(strlen(initcode)+strlen(conditcode)+strlen(incode)+strlen(blockcode)+strlen("for(){}\n\t\n  ")+(visitor->memory.indent)+1,1);
-    sprintf(code,"for(%s %s %s){\n\t%s",initcode,conditcode,incode,blockcode);
+    char* code=calloc(strlen(initcode)+strlen(conditcode)+strlen(incode)+strlen(blockcode)+strlen("for(){}\n\t\n")+(visitor->memory.indent)+1,1);
+    sprintf(code,"for(%s %s %s){\n%s",initcode,conditcode,incode,blockcode);
     for(i=0;i<visitor->memory.indent;++i)
     {
         strcat(code,"\t");
     }
     strcat(code,"}");
+
+    free(initcode);
+    free(conditcode);
+    free(incode);
+    free(blockcode);
+
+    return code;
+}
+
+char* VisitorTraverseWhile(VisitorType* visitor, ASTreeType* node)
+{
+    if(node->whileexpr->type!=AST_CHKEQ
+    && node->whileexpr->type!=AST_CHKNEQ
+    && node->whileexpr->type!=AST_CHKGREATER
+    && node->whileexpr->type!=AST_CHKGREATEREQ
+    && node->whileexpr->type!=AST_CHKLESS
+    && node->whileexpr->type!=AST_CHKLESSEQ)
+    {
+        printf("While loop must have a valid expression\n");
+        exit(1);
+        return NULL;
+    }
+
+    char* conditcode=VisitorTraverseNode(visitor,node->whileexpr);
+
+    ++visitor->memory.indent;
+    char* blockcode=VisitorTraverseRoot(visitor,node->whilebody,0);
+    --visitor->memory.indent;
+
+    char* code=calloc(strlen(conditcode)+strlen(blockcode)+strlen("while(){}\n")+(visitor->memory.indent)+1,1);
+    sprintf(code,"while(%s){\n%s",conditcode,blockcode);
+    for(int i=0;i<visitor->memory.indent;++i)
+    {
+        strcat(code,"\t");
+    }
+    strcat(code,"}");
+
+    free(conditcode);
+    free(blockcode);
 
     return code;
 }

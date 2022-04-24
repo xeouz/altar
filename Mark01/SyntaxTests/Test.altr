@@ -1,7 +1,5 @@
 func main()
 {
-    for(var i = 0; i < 10; i++)
-    {
-        echo("Hello "+i);
-    }
+    var a = [1,2,3,4];
+    a[1]+=1;
 }

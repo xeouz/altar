@@ -859,6 +859,7 @@ ASTreeType* ParserParsePreIncrDecr(ParserType* parser, char incrOrDecr)
     ASTreeType* AST=InitASTree(incrOrDecr==0?AST_VARIABLE_INCREMENT:AST_VARIABLE_DECREMENT);
     AST->opts.preincrement_decrement=0; // pre increment/decrement
     AST->tree_child=ParserParseVariable(parser);
+    AST->name.variable_name=AST->tree_child->name.variable_name;
 
     return AST;
 }
