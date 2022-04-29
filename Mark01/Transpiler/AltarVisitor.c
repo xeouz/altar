@@ -23,6 +23,7 @@ VisitorType* InitVisitor()
     visitor->memory.std_includes.boost_any=0;
     visitor->memory.std_includes.iostream=0;
     visitor->memory.indent=0;
+    visitor->memory.in_loop=0;
     return visitor;
 }
 

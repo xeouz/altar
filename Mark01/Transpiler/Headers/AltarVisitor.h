@@ -28,6 +28,8 @@ typedef struct VisitorStructure
         }std_includes;
 
         USInt indent;
+
+        ISChar in_loop;
     }memory;
 
     char* code;
