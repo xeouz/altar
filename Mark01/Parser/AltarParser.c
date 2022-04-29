@@ -662,9 +662,26 @@ ASTreeType* ParserParseVariable(ParserType* parser)
 {
     // Save the variable name
     char* variableName = parser->CurrentToken->value;
+    ASTreeType* variable_=InitASTree(AST_VARIABLE);
+    variable_->name.variable_name=variableName;
 
-    // Advance the variable name
+    ASTreeType* variable=InitASTree(AST_VARIABLE);
     ParserAdvanceToken(parser,TOKEN_ID);
+
+    if(parser->CurrentToken->type==TOKEN_LBRACK)
+    {
+        variable_->type=AST_BLOCK_ACCESS;
+        ParserAdvanceToken(parser,TOKEN_LBRACK);
+        variable_->blockaccess=ParserParseExpression(parser);
+        ParserAdvanceToken(parser,TOKEN_RBRACK);
+
+        variable->name.variable_name=variableName;
+        variable->blockaccess=variable_;
+    }
+    else
+    {
+        variable=variable_;
+    }
 
     // If the current token is a left parenthesis
     if(parser->CurrentToken->type==TOKEN_LPAREN)
@@ -676,8 +693,7 @@ ASTreeType* ParserParseVariable(ParserType* parser)
     {
         ParserAdvanceToken(parser,TOKEN_COLON);
 
-        ASTreeType* variable=InitASTree(AST_VARIABLE_DECLARATION);
-        variable->name.variable_name=variableName;
+        variable->type=AST_VARIABLE_DECLARATION;
         variable->val_type.variable_def_value_type=parser->CurrentToken->value;
 
         ParserAdvanceToken(parser,TOKEN_ID);
@@ -690,7 +706,6 @@ ASTreeType* ParserParseVariable(ParserType* parser)
         else
         {
             variable->type=AST_VARIABLE;
-            variable->name.variable_name=variableName;
             variable->val_type.variable_def_value_type=parser->PreviousToken->value;
 
             return variable;
@@ -698,46 +713,21 @@ ASTreeType* ParserParseVariable(ParserType* parser)
     }
     else if(parser->CurrentToken->type==TOKEN_EQUALS)
     {
-        ASTreeType* variable=InitASTree(AST_VARIABLE_ASSIGNMENT);
-        variable->name.variable_name=variableName;
+        variable->type=AST_VARIABLE_ASSIGNMENT;
 
         return ParserParseAssignment(parser, variable);
-    }
-    else if(parser->CurrentToken->type==TOKEN_LBRACK)
-    {
-        ASTreeType* access=InitASTree(AST_BLOCK_ACCESS);
-        access->name.variable_name=variableName;
-        
-        ParserAdvanceToken(parser,TOKEN_LBRACK);
-        access->blockaccess=ParserParseExpression(parser);
-        ParserAdvanceToken(parser,TOKEN_RBRACK);
-
-        if(parser->CurrentToken->type==TOKEN_EQUALS)
-        {
-
-            ASTreeType* assignment=InitASTree(AST_VARIABLE_ASSIGNMENT);
-            assignment->name.variable_name=variableName;
-            assignment=ParserParseAssignment(parser,assignment);
-            assignment->blockaccess=access;
-
-            return assignment;
-        }
-
-        return access;
     }
     else if(parser->CurrentToken->type==TOKEN_INCR)
     {
         ParserAdvanceToken(parser,TOKEN_INCR);
-        ASTreeType* variable=InitASTree(AST_VARIABLE_INCREMENT);
-        variable->name.variable_name=variableName;
+        variable->type=AST_VARIABLE_INCREMENT;
         variable->opts.preincrement_decrement=1; // post increment
         return variable;
     }
     else if(parser->CurrentToken->type==TOKEN_DECR)
     {
         ParserAdvanceToken(parser,TOKEN_DECR);
-        ASTreeType* variable=InitASTree(AST_VARIABLE_DECREMENT);
-        variable->name.variable_name=variableName;
+        variable->type=AST_VARIABLE_DECREMENT;
         variable->opts.preincrement_decrement=1; // post decrement
         return variable;
     }
@@ -747,17 +737,12 @@ ASTreeType* ParserParseVariable(ParserType* parser)
         ||  parser->CurrentToken->type==TOKEN_DIVEQ
         ||  parser->CurrentToken->type==TOKEN_MODEQ)
     {
-        ASTreeType* variable=InitASTree(AST_VARIABLE_ASSIGNMENT);
-        variable->name.variable_name=variableName;
+        variable->type=AST_VARIABLE_ASSIGNMENT;
         variable->opts.assignment=1;
         variable->opts.assignment_operator=parser->CurrentToken->type;
 
         return ParserParseAssignment(parser,variable);
     }
-
-    // Create the variable ASTree and set the name
-    ASTreeType* variable=InitASTree(AST_VARIABLE);
-    variable->name.variable_name=variableName;
 
     // Return the variable ASTree
     return variable;
