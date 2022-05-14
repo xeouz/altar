@@ -1,17 +1,34 @@
 func is_prime(num:int)
 {
-    if(num%2==0)
+    if(num <= 1)
     {
         return 0;
     }
-
-    for(var i=3; i<num; i+=2)
+    
+    for(var i=2; i<num; ++i)
     {
-        if(num%i==0)
+        if(num%i == 0)
         {
             return 0;
         }
     }
     
     return 1;
+}
+
+func main()
+{
+    var num=10;
+    
+    for(var i=0; i<num; ++i)
+    {
+        if(is_prime(num))
+        {
+            echo(num+" is prime");
+        }
+        else
+        {
+            echo(num+" is not prime");
+        }
+    }
 }
