@@ -61,7 +61,8 @@ func main()
 ```go
 func main()
 {
-    for(var i=0; i<10; i++)
+    var i=0;
+    for(i=0; i<5; i++)
     {
         echo(i);
     }
